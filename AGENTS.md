@@ -112,7 +112,9 @@ Câu hỏi môn chấm: *tri thức gì* được khai phá từ dữ liệu web
 - **Không commit:** HTML thô, dữ liệu crawl, file export nhãn, file model, cache Hugging Face. Những thứ này nằm ở `s3://joblens/…`.
 - **Train xong:** cập nhật `models.yaml` (version, đường dẫn S3, metric, snapshot dữ liệu train). Image gắn tag `version-gitsha`, không dùng `latest`.
 - **Ghi nguồn số liệu:** mỗi thí nghiệm ghi snapshot hay tag Iceberg đã dùng và báo cáo cả baseline. Nhãn yếu (tag nhà tuyển dụng, cột kỹ năng LLM của VietJobs) không được dùng làm tập test.
-- Repo này ghi topic `jobs.raw.*`, `reviews.raw.*` và bảng `silver.job_skills`, `silver.review_aspects` (qua job do Airflow của repo Big Data chạy). Không ghi bảng khác.
+- Repo này ghi topic `jobs.raw.*`, `reviews.raw.*`, `dlq.parse_errors.v1` và bảng `silver.job_skills`, `silver.job_dedup`, `silver.review_aspects`, `silver.reco_scores` (qua image do Airflow của repo Big Data chạy). Không ghi bảng khác.
+- Mỗi mô hình giao dưới dạng image theo hợp đồng chạy trong ADR 0001 D3 (`--input-table … --output-table … --run-id …`), kèm image stub. Dịch vụ tìm kiếm (nếu làm WM4) theo `schemas/api/search.v1.yaml`.
+- Không chuẩn hóa lương/địa điểm/cấp bậc cho silver (việc của Big Data – D2); `job_uid` luôn tính bằng `joblens_contracts.job_uid()`.
 - Phải chạy được một mình: train và đánh giá trên VietJobs + fixtures, không cần Kafka hay K8s.
 
 **Lệnh kiểm tra:** `pre-commit run --all-files`. Khi đã có code thì thêm `pytest -q`.
