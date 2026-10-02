@@ -1,0 +1,13 @@
+# Danh mục model đã train (quy tắc 8, mục "Trạng thái nằm ngoài git").
+# File model KHÔNG commit vào git – chỉ ghi lại phiên bản và chỗ lưu.
+#
+# Mẫu một mục:
+# - name: skill-extractor
+#   version: 0.1.0
+#   image: skill-extractor:0.1.0-<gitsha>
+#   s3_path: s3://joblens/models/skill-extractor/0.1.0/
+#   train_snapshot: <Iceberg snapshot id hoặc tag>
+#   metrics: {entity_f1_strict: <...>}
+#   trained_by: <Họ tên>
+#   date: <yyyy-mm-dd>
+models: []
