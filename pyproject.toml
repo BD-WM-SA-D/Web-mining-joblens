@@ -1,0 +1,70 @@
+[project]
+name = "joblens-mining"
+version = "0.1.0"
+description = "Web Mining (IT4868E) cho JobLens: thu thập và khử trùng tin tuyển dụng, trích xuất kỹ năng, ABSA review công ty, gợi ý việc làm."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # Hợp đồng dữ liệu dùng chung (schema, contract bảng, job_uid) – đổi rev khi joblens gắn tag
+    "joblens-contracts",
+    # Thu thập (WM1)
+    "scrapy>=2.11",
+    "requests>=2.32",
+    "lxml>=5.0",
+    # Dữ liệu
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "huggingface-hub>=0.25",   # tải VietJobs vào data/ (đã gitignore)
+    "jsonschema>=4.23",
+    "pyyaml>=6",
+    "python-dotenv>=1.0",
+    # Tiếng Việt và baseline (WM1–WM5)
+    "underthesea>=6.8",
+    "datasketch>=1.6",         # MinHash LSH cho dedup
+    "scikit-learn>=1.5",
+    "rank-bm25>=0.2",          # baseline tìm kiếm (WM4, tùy chọn)
+    "networkx>=3.3",           # đồ thị kỹ năng (WM6, tùy chọn)
+    "seqeval>=1.2",            # F1 cấp thực thể cho WM2
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff==0.8.0",             # cùng bản với hook ruff trong .pre-commit-config.yaml
+    "pre-commit>=3.8",
+    "ipykernel>=6.29",         # chạy notebook trong experiments/ (nhớ xóa output – nbstripout)
+]
+# Mô hình PhoBERT/ViSoBERT (WM2, WM3) – nặng (~3 GB), không cài mặc định: uv sync --group ml
+ml = [
+    "torch>=2.4",
+    "transformers>=4.44",
+    "datasets>=3.0",
+    "accelerate>=0.34",
+]
+# Producer Kafka – chỉ cần khi ghép với nền tảng Big Data: uv sync --group kafka
+kafka = [
+    "confluent-kafka>=2.5",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
+[tool.uv.sources]
+joblens-contracts = { git = "https://github.com/BD-WM-SA-D/joblens", branch = "main" }
+# PyTorch bản CUDA 12.8 (GPU RTX 3050 Ti, driver hỗ trợ CUDA 12.9). Máy không có GPU NVIDIA: xóa dòng này để dùng bản CPU.
+# Mạng trường/nhà có thể chặn download.pytorch.org và huggingface.co – bật VPN (ví dụ Cloudflare WARP) khi cài/tải model.
+torch = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
