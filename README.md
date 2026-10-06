@@ -2,7 +2,7 @@
 
 Phần khai phá dữ liệu web của dự án JobLens VN: thu thập và khử trùng tin tuyển dụng (WM1), trích xuất kỹ năng (WM2), khai phá quan điểm theo khía cạnh trên review công ty (WM3), mở rộng sang tìm kiếm/gợi ý/đồ thị kỹ năng (WM4–WM6).
 
-> **Phạm vi đánh giá – môn Web Mining (<mã môn>, học kỳ 20261)**
+> **Phạm vi đánh giá – môn Web Mining (IT4868E, học kỳ 20261)**
 >
 > Dự án JobLens dùng chung hạ tầng dữ liệu với môn Big Data Storage and Processing và Phân tích thiết kế hệ thống (đã được giảng viên đồng ý ngày <dd/mm/yyyy>). Repo này chỉ chứa và đề nghị đánh giá các phần sau:
 > - Spider, parser, crawl lịch sự, dedup (thuật toán và đánh giá).
