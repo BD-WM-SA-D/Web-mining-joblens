@@ -53,6 +53,7 @@ class TopcvSpider(scrapy.Spider):
         it_only: bool = True,
         slug_filter: bool = True,
         out_dir: str | None = None,
+        state_dir: str | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -64,6 +65,10 @@ class TopcvSpider(scrapy.Spider):
         day = datetime.now(UTC).strftime("%Y-%m-%d")
         self.out_dir = Path(out_dir) if out_dir else ROOT / "data" / "crawl" / "topcv" / day
         self.html_dir = ROOT / "data" / "raw-html" / "topcv" / day
+        # Trạng thái để crawl tiếp sau khi dừng/mất mạng: ID đã tải (IT, không IT, lỗi) không tải lại
+        self.state_dir = Path(state_dir) if state_dir else ROOT / "data" / "crawl" / "topcv"
+        self.seen = self._load_seen()
+        self._seen_f = None
         self.requested = 0
         self.stats_local = {"jobs_ok": 0, "skipped_not_it": 0, "parse_errors": 0}
         self._jobs_f = self._err_f = None
@@ -74,9 +79,32 @@ class TopcvSpider(scrapy.Spider):
             self.out_dir.mkdir(parents=True, exist_ok=True)
             self._jobs_f = (self.out_dir / "jobs.jsonl").open("a", encoding="utf-8")
             self._err_f = (self.out_dir / "parse_errors.jsonl").open("a", encoding="utf-8")
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            self._seen_f = (self.state_dir / "seen_ids.txt").open("a", encoding="utf-8")
+
+    def _load_seen(self) -> set[str]:
+        """ID trong seen_ids.txt và trong mọi jobs.jsonl đã có dưới state_dir."""
+        seen: set[str] = set()
+        f = self.state_dir / "seen_ids.txt"
+        if f.exists():
+            seen |= {ln.strip() for ln in f.read_text(encoding="utf-8").splitlines() if ln.strip()}
+        for jf in self.state_dir.glob("*/jobs.jsonl"):
+            for ln in jf.read_text(encoding="utf-8").splitlines():
+                try:
+                    seen.add(json.loads(ln)["source_job_id"])
+                except (json.JSONDecodeError, KeyError):
+                    continue
+        return seen
+
+    def _mark_seen(self, url: str):
+        sid = job_id(url)
+        if sid and sid not in self.seen:
+            self.seen.add(sid)
+            self._seen_f.write(sid + "\n")
+            self._seen_f.flush()
 
     def closed(self, reason):
-        for f in (self._jobs_f, self._err_f):
+        for f in (self._jobs_f, self._err_f, self._seen_f):
             if f:
                 f.close()
         self.logger.info("Kết thúc (%s): %s", reason, self.stats_local)
@@ -101,12 +129,15 @@ class TopcvSpider(scrapy.Spider):
                 continue
             if self.since and e.lastmod and e.lastmod < self.since:
                 continue
+            if job_id(e.loc) in self.seen:
+                continue
             self.requested += 1
             yield scrapy.Request(e.loc, callback=self.parse_job, cb_kwargs={"lastmod": e.lastmod})
 
     # ---- trang tin ----------------------------------------------------------------
     def parse_job(self, response, lastmod: str | None = None):
         self._open_files()
+        self._mark_seen(response.url)
         try:
             parsed = parse_job_page(response.text, response.url, lastmod=lastmod)
         except ParseError as exc:
@@ -121,6 +152,7 @@ class TopcvSpider(scrapy.Spider):
             return
         self._save_html(response)
         self._jobs_f.write(json.dumps(parsed.message, ensure_ascii=False) + "\n")
+        self._jobs_f.flush()  # ghi ngay: dừng đột ngột cũng không mất tin đã tải
         self.stats_local["jobs_ok"] += 1
         yield parsed.message
 
@@ -137,3 +169,4 @@ class TopcvSpider(scrapy.Spider):
             "topcv", error_type, message, url=url, source_record_id=job_id(url), component_version=PARSER_VERSION
         )
         self._err_f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        self._err_f.flush()

@@ -129,7 +129,7 @@ def _resp(url, body, **cb):
 
 
 def test_spider_flow_offline(tmp_path, monkeypatch):
-    spider = TopcvSpider(max_jobs=5, out_dir=str(tmp_path))
+    spider = TopcvSpider(max_jobs=5, out_dir=str(tmp_path / "day"), state_dir=str(tmp_path))
     monkeypatch.setattr(spider, "html_dir", tmp_path / "html")
     reqs = list(spider.parse_index(_resp("https://www.topcv.vn/sitemap/jobs.xml", SITEMAP_INDEX)))
     assert len(reqs) == 1  # max_sitemaps=1
@@ -145,6 +145,12 @@ def test_spider_flow_offline(tmp_path, monkeypatch):
     assert list(spider.parse_job(_resp(URL_IT, read("job_broken.html")))) == []
     spider.closed("test")
     assert spider.stats_local == {"jobs_ok": 1, "skipped_not_it": 1, "parse_errors": 1}
-    assert (tmp_path / "jobs.jsonl").read_text(encoding="utf-8").count("\n") == 1
-    assert "missing_jsonld" in (tmp_path / "parse_errors.jsonl").read_text(encoding="utf-8")
+    assert (tmp_path / "day" / "jobs.jsonl").read_text(encoding="utf-8").count("\n") == 1
+    assert "missing_jsonld" in (tmp_path / "day" / "parse_errors.jsonl").read_text(encoding="utf-8")
+
+    # Chạy lại (crawl tiếp): tin đã tải không được xếp hàng lại
+    again = TopcvSpider(max_jobs=5, out_dir=str(tmp_path / "day2"), state_dir=str(tmp_path))
+    assert {"900001", "900002"} <= again.seen
+    urls = [r.url for r in again.parse_urlset(_resp("https://www.topcv.vn/sitemap/jobs_0.xml", URLSET))]
+    assert urls == ["https://www.topcv.vn/viec-lam/tester-phan-mem/900003.html"]
     assert (tmp_path / "html" / "900001.html.gz").exists()
