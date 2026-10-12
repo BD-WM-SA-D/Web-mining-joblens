@@ -835,7 +835,7 @@ wheels = [
 [[package]]
 name = "joblens-contracts"
 version = "0.2.0"
-source = { git = "https://github.com/BD-WM-SA-D/joblens?branch=main#5f7b069717f52b5ad6688d3e92966db421bb0615" }
+source = { git = "https://github.com/BD-WM-SA-D/joblens?branch=main#9750b1a64f4336493c0e8173425c85705e252c8a" }
 dependencies = [
     { name = "pyyaml" },
 ]
