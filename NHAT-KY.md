@@ -2,6 +2,14 @@
 
 Chỉ ghi sự kiện đáng nhớ: đổi hợp đồng hoặc file cấu hình chung, ghép hệ thống, chốt số liệu, quyết định quan trọng. Việc thường ngày đã có lịch sử git. Mục mới đặt trên cùng, vài dòng là đủ – xem [repo-routing](https://github.com/BD-WM-SA-D/joblens/blob/main/docs/repo-routing.md), mục Nhật ký.
 
+## 2026-10-12 · Hoang Le
+
+- **Quyết định dữ liệu:** tin crawl (TopCV, ITviec) là dữ liệu chính; VietJobs chỉ dùng cho nhãn yếu, từ điển alias, baseline (joblens docs/13).
+- **WM2:** tập test (~1.000 câu, người gán) lấy từ tin TopCV đã crawl. Đợt `skill_batch1` (VietJobs) dừng ở ~300 câu, dùng làm dev set / luyện guideline.
+- Thêm `ie/vietjobs.py` (tập IT cố định `it_v1`), `ie/skill_alias.py` + `ie/resources/skill_alias.csv` (bản nháp tự sinh, chưa xem tay), `annotation/sample_skill_batch.py`, `annotation/guideline_skill.md` (bản 0.2), `annotation/label_studio_skill.xml`, `experiments/results.md`.
+- Việc mới từ ADR 0002 (joblens): `mining-service` + stub theo `schemas/api/mining.v1.yaml`; ghi `sentence_text` vào `silver.review_aspects`.
+- AI: Claude Code (Claude Opus 5.5) – script chuẩn bị dữ liệu, guideline, nháp từ điển; <người kiểm tra> đã kiểm tra
+
 ## 2026-10-02 · Hoang Le · chưa có PR
 
 - **Tạo:** –

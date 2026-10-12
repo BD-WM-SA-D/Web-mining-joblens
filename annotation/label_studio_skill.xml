@@ -1,0 +1,12 @@
+<!-- Cấu hình Label Studio cho WM2 (gán span kỹ năng). Hướng dẫn: annotation/guideline_skill.md -->
+<View>
+  <Header value="Bôi đen từng kỹ năng cứng (xem guideline_skill.md). Câu không có kỹ năng: bấm Submit luôn."/>
+  <Labels name="label" toName="text" granularity="word">
+    <Label value="SKILL" background="#4c9aff" hotkey="s"/>
+  </Labels>
+  <Text name="text" value="$text"/>
+  <Choices name="flag" toName="text" choice="single" showInline="true">
+    <Choice value="khó / cần bàn"/>
+  </Choices>
+  <TextArea name="comment" toName="text" placeholder="Ghi chú (không bắt buộc)" rows="1"/>
+</View>
