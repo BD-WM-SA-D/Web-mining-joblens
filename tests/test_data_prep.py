@@ -54,3 +54,16 @@ def test_sample_takes_whole_postings_and_is_reproducible():
     assert {t["job_uid"] for t in tasks} == set(picked)
     assert sample(df, target=10, seed=1, exclude=set())[1] == picked
     assert not set(picked) & set(sample(df, target=10, seed=1, exclude=set(picked))[1])
+
+
+def test_sample_max_per_posting():
+    df = pd.DataFrame(
+        {
+            "job_uid": [f"{i:040d}" for i in range(10)],
+            "description": ["\n".join(f"- Câu mô tả số {k} có Python" for k in range(6))] * 10,
+            "requirements_text": ["- Biết Docker và Linux"] * 10,
+        }
+    )
+    tasks, picked = sample(df, target=12, seed=3, exclude=set(), max_per_posting=3)
+    assert len(picked) == 4 and len(tasks) == 12
+    assert all(sum(t["job_uid"] == u for t in tasks) == 3 for u in picked)

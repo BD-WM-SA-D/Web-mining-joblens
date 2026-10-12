@@ -117,6 +117,12 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 3. **Gán thử 100 câu** đầu, xem lại guideline, rồi gán tiếp.
 4. **Đo κ:** các câu có `double = true` (khoảng 10%) do người thứ hai gán độc lập. Tính Cohen's κ trên nhãn BIO mức token. Mục tiêu κ ≥ 0,7; thấp hơn thì bàn lại các câu lệch và sửa guideline.
 5. Export JSON từ Label Studio vào `data/annotation/` (không commit). Chỉ ghi số liệu (số câu, số span, κ) vào `experiments/results.md`.
+6. **Tập test `skill_test1`** (1.000 câu từ 125 tin TopCV, snapshot `topcv_v1`): tạo **project Label Studio riêng**, không trộn với đợt VietJobs `skill_batch1` (dev set). Tạo lại bằng:
+   ```
+   uv run python -m crawler.snapshot --source topcv --name topcv_v1
+   uv run python -m annotation.sample_skill_batch --snapshot data/crawl/topcv/topcv_v1.parquet --batch skill_test1 --sentences 1000 --seed 20261012 --max-per-posting 8
+   ```
+   Câu tiếng Anh gán như tiếng Việt (quy tắc 8); dòng tiêu đề kiểu "Your Recruitment Journey" thì Submit luôn.
 
 ## Lịch sử
 

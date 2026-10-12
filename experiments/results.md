@@ -52,3 +52,10 @@ Chỉ ghi số liệu, không ghi dữ liệu gốc. Mỗi số kèm snapshot d�
 | Nhóm nghề | Software Engineering 60, IT Infrastructure 59, Software Testing 37, Thiết kế 31, Product Management 27, AI 18 |
 | Địa điểm | Hà Nội 199, TP.HCM 70, Đà Nẵng 8 |
 | Độ dài mô tả + yêu cầu | median 301 từ; 100% có phần yêu cầu |
+
+### Tập test WM2 `skill_test1` (2026-10-12)
+
+- Snapshot `topcv_v1`: 304 tin IT TopCV, ngày đăng 17/08–12/10/2026, ids_sha256 `61bad0f9…d1377048`. Lệnh: `uv run python -m crawler.snapshot --source topcv --name topcv_v1`.
+- Rút mẫu: 1.000 câu từ 125 tin (tối đa 8 câu/tin, seed 20261012), 96 câu của 12 tin để đo κ. Nhóm nghề: hạ tầng IT 24, phát triển phần mềm 21, testing 17, thiết kế 15, product 14, AI 9.
+- Có câu tiếng Anh (tin của công ty nước ngoài).
+- κ: `<...>` (chưa gán)

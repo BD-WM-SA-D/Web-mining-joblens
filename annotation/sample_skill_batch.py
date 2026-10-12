@@ -50,9 +50,13 @@ def split_sentences(text: str | None) -> list[str]:
     return out
 
 
-def sample(df: pd.DataFrame, target: int, seed: int, exclude: set[str]) -> tuple[list[dict], list[str]]:
+def sample(
+    df: pd.DataFrame, target: int, seed: int, exclude: set[str], max_per_posting: int | None = None
+) -> tuple[list[dict], list[str]]:
+    """Rút theo tin. max_per_posting: lấy ngẫu nhiên tối đa N câu mỗi tin (giữ thứ tự) để trải ra nhiều tin hơn."""
+    rng = random.Random(seed)
     uids = sorted(set(df["job_uid"]) - exclude)
-    random.Random(seed).shuffle(uids)
+    rng.shuffle(uids)
     by_uid = df.set_index("job_uid")
     tasks, picked = [], []
     for uid in uids:
@@ -60,9 +64,12 @@ def sample(df: pd.DataFrame, target: int, seed: int, exclude: set[str]) -> tuple
             break
         row = by_uid.loc[uid]
         picked.append(uid)
-        for col, tag in SECTIONS.items():
-            for i, sent in enumerate(split_sentences(row[col])):
-                tasks.append({"id": f"{uid[:12]}-{tag}{i:02d}", "job_uid": uid, "section": tag, "text": mask_pii(sent)})
+        sents = [(tag, i, s) for col, tag in SECTIONS.items() for i, s in enumerate(split_sentences(row[col]))]
+        if max_per_posting and len(sents) > max_per_posting:
+            keep = set(rng.sample(range(len(sents)), max_per_posting))
+            sents = [x for k, x in enumerate(sents) if k in keep]
+        for tag, i, sent in sents:
+            tasks.append({"id": f"{uid[:12]}-{tag}{i:02d}", "job_uid": uid, "section": tag, "text": mask_pii(sent)})
     double = set(picked[: max(1, len(picked) // 10)])
     for t in tasks:
         t["double"] = t["job_uid"] in double
@@ -76,13 +83,14 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=20261007)
     ap.add_argument("--batch", default="skill_batch1")
     ap.add_argument("--exclude", type=Path, nargs="*", default=[], help="manifest các đợt trước")
+    ap.add_argument("--max-per-posting", type=int, default=None, help="tối đa N câu mỗi tin (tập test: 8)")
     args = ap.parse_args()
 
     df = pd.read_parquet(args.snapshot)
     exclude = set()
     for m in args.exclude:
         exclude |= set(json.loads(m.read_text("utf-8"))["job_uids"])
-    tasks, picked = sample(df, args.sentences, args.seed, exclude)
+    tasks, picked = sample(df, args.sentences, args.seed, exclude, args.max_per_posting)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / f"{args.batch}.labelstudio.json").write_text(
@@ -92,6 +100,7 @@ def main() -> None:
         "batch": args.batch,
         "snapshot": args.snapshot.stem,
         "seed": args.seed,
+        "max_per_posting": args.max_per_posting,
         "sentences": len(tasks),
         "postings": len(picked),
         "double_postings": sum(1 for u in picked[: max(1, len(picked) // 10)]),
