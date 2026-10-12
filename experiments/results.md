@@ -34,3 +34,21 @@ Chỉ ghi số liệu, không ghi dữ liệu gốc. Mỗi số kèm snapshot d�
 - Bộ lọc slug bản đầu khớp chuỗi con ("ai" khớp "tai") → sửa sang khớp từ nguyên vẹn: số URL lọt lọc trong một sitemap con giảm 29 → 8/200.
 - Sitemap tin TopCV: 220 file con × ~200 URL ≈ 44.000 tin đang có. Ước tính crawl toàn bộ tin IT: ~2.000 request (~35–40 phút).
 - Tag "Kỹ năng cần có" của nhà tuyển dụng lẫn kỹ năng mềm ("Giao tiếp", "Làm việc nhóm") và cụm dài → nhãn yếu WM2 phải lọc qua từ điển alias.
+
+### Crawl TopCV đợt 1 và sự cố HTTP 429 (2026-10-12)
+
+**Sự cố:** lần chạy `--max-jobs 2000 --max-sitemaps 220` (19:56–21:52) bị TopCV trả **HTTP 429 (Too Many Requests)** từ khoảng 20:40. Spider bản cũ không dừng mà thử lại (RETRY_TIMES = 2), AUTOTHROTTLE còn rút ngắn khoảng cách vì 429 trả về nhanh → **5.507 request, 4.673 bị 429**, 832 thành công. Khi theo dõi, agent chỉ nhìn số trang/phút nên báo nhầm là "máy chủ chậm".
+**Đã sửa (`crawler/topcv/spider.py`):** gặp 429/403 là dừng cả lần chạy, không thử lại; tối thiểu 3 giây/request; tối đa 1 lần thử lại cho lỗi 5xx; dừng khi quá 20 lỗi. **Bài học:** theo dõi crawl phải xem mã HTTP (`response_status_count`), không chỉ số trang.
+**Từ nay:** mỗi ngày tối đa vài trăm request, chia nhỏ; không chạy lại trong ngày đã bị 429.
+
+**Dữ liệu thu được (đợt 1, gộp lần thử):** 304 tin IT khác nhau.
+
+| Chỉ số | Giá trị |
+|---|---|
+| Lương dạng số / "Thỏa thuận" | 55% / 44% |
+| Có tag "Kỹ năng cần có" | 51% (median 1 tag/tin; trung bình 5,1) |
+| Tag phổ biến | Python 17, SQL 15, **Giao tiếp 14, Làm việc nhóm 11**, Java 10, Giải quyết vấn đề 9 – kỹ năng mềm lẫn nhiều |
+| `date_posted` | 100% có; 17/08–12/10/2026 (09: 146 tin, 10: 157 tin) – sitemap chỉ chứa tin đang mở |
+| Nhóm nghề | Software Engineering 60, IT Infrastructure 59, Software Testing 37, Thiết kế 31, Product Management 27, AI 18 |
+| Địa điểm | Hà Nội 199, TP.HCM 70, Đà Nẵng 8 |
+| Độ dài mô tả + yêu cầu | median 301 từ; 100% có phần yêu cầu |

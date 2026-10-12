@@ -2,6 +2,12 @@
 
 Chỉ ghi sự kiện đáng nhớ: đổi hợp đồng hoặc file cấu hình chung, ghép hệ thống, chốt số liệu, quyết định quan trọng. Việc thường ngày đã có lịch sử git. Mục mới đặt trên cùng, vài dòng là đủ – xem [repo-routing](https://github.com/BD-WM-SA-D/joblens/blob/main/docs/repo-routing.md), mục Nhật ký.
 
+## 2026-10-12 (2) · Hoang Le
+
+- **Sự cố crawl:** TopCV trả HTTP 429 từ ~20:40; spider bản cũ thử lại → 5.507 request (4.673 bị 429). Đã sửa: gặp 429/403 dừng ngay, tối thiểu 3 giây/request, giới hạn thử lại. Không crawl lại trong ngày bị 429. Chi tiết: `experiments/results.md`.
+- **Chốt số liệu đợt 1:** 304 tin IT TopCV (`data/crawl/topcv/2026-10-12/`, không commit).
+- AI: Claude Code (Claude Opus 5.5) – chạy crawl, phân tích sự cố, sửa spider; <người kiểm tra> đã kiểm tra
+
 ## 2026-10-12 · Hoang Le
 
 - **Quyết định dữ liệu:** tin crawl (TopCV, ITviec) là dữ liệu chính; VietJobs chỉ dùng cho nhãn yếu, từ điển alias, baseline (joblens docs/13).

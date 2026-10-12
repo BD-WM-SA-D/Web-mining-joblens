@@ -3,7 +3,9 @@
 Chạy (chỉ khi Hoang Le cho phép crawl thật):
     uv run python -m crawler.topcv.run --max-jobs 20
 
-Giới hạn cứng: tuân thủ robots.txt, 1 request/giây/domain, không cookie, không đăng nhập, không chạm đường dẫn CV.
+Giới hạn cứng: tuân thủ robots.txt, tối thiểu 3 giây/request, không cookie, không đăng nhập, không chạm đường dẫn CV.
+Gặp HTTP 429 (Too Many Requests) hoặc 403 thì DỪNG NGAY cả lần chạy, không thử lại (sự cố 2026-10-12:
+bản cũ thử lại 429 và gửi 5.507 request, 4.673 bị từ chối – xem experiments/results.md).
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import scrapy
+from scrapy.exceptions import CloseSpider
 
 from crawler.common import mask_pii, parse_error_message, schema_errors
 from crawler.topcv.parser import PARSER_VERSION, ParseError, parse_job_page
@@ -26,18 +29,32 @@ DEFAULT_UA = "JobLensStudentProject/0.1 (HUST course project, non-commercial; co
 POLITE_SETTINGS = {
     "ROBOTSTXT_OBEY": True,
     "USER_AGENT": os.environ.get("JOBLENS_CRAWL_USER_AGENT", DEFAULT_UA),
-    "DOWNLOAD_DELAY": 1.0,
+    "DOWNLOAD_DELAY": 3.0,
     "RANDOMIZE_DOWNLOAD_DELAY": True,
     "CONCURRENT_REQUESTS": 1,
     "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
     "AUTOTHROTTLE_ENABLED": True,
-    "AUTOTHROTTLE_START_DELAY": 1.0,
+    "AUTOTHROTTLE_START_DELAY": 3.0,
+    "AUTOTHROTTLE_MAX_DELAY": 60.0,
     "AUTOTHROTTLE_TARGET_CONCURRENCY": 1.0,
     "COOKIES_ENABLED": False,
-    "RETRY_TIMES": 2,
+    "RETRY_TIMES": 1,
+    # 429/403 không nằm trong danh sách thử lại: spider tự dừng khi gặp (BLOCK_STATUSES)
+    "RETRY_HTTP_CODES": [500, 502, 503, 504, 522, 524, 408],
+    "HTTPERROR_ALLOWED_CODES": [403, 429],
+    "CLOSESPIDER_ERRORCOUNT": 20,
     "TELNETCONSOLE_ENABLED": False,
     "LOG_LEVEL": "INFO",
 }
+
+
+BLOCK_STATUSES = {403, 429}
+
+
+def check_not_blocked(response):
+    """Trang nguồn bảo giảm tốc hoặc chặn → dừng cả lần chạy (không thử lại, không lách)."""
+    if response.status in BLOCK_STATUSES:
+        raise CloseSpider(f"blocked_http_{response.status}")
 
 
 class TopcvSpider(scrapy.Spider):
@@ -114,11 +131,13 @@ class TopcvSpider(scrapy.Spider):
         yield scrapy.Request(JOBS_SITEMAP, callback=self.parse_index)
 
     def parse_index(self, response):
+        check_not_blocked(response)
         _, children = parse_sitemap(response.body)
         for child in children[: self.max_sitemaps]:
             yield scrapy.Request(child.loc, callback=self.parse_urlset)
 
     def parse_urlset(self, response):
+        check_not_blocked(response)
         _, entries = parse_sitemap(response.body)
         for e in entries:
             if self.requested >= self.max_jobs:
@@ -136,6 +155,7 @@ class TopcvSpider(scrapy.Spider):
 
     # ---- trang tin ----------------------------------------------------------------
     def parse_job(self, response, lastmod: str | None = None):
+        check_not_blocked(response)
         self._open_files()
         self._mark_seen(response.url)
         try:

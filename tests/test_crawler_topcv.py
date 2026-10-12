@@ -154,3 +154,16 @@ def test_spider_flow_offline(tmp_path, monkeypatch):
     urls = [r.url for r in again.parse_urlset(_resp("https://www.topcv.vn/sitemap/jobs_0.xml", URLSET))]
     assert urls == ["https://www.topcv.vn/viec-lam/tester-phan-mem/900003.html"]
     assert (tmp_path / "html" / "900001.html.gz").exists()
+
+
+def test_spider_stops_on_rate_limit(tmp_path):
+    from scrapy.exceptions import CloseSpider
+
+    spider = TopcvSpider(max_jobs=5, out_dir=str(tmp_path / "day"), state_dir=str(tmp_path))
+    for status in (429, 403):
+        resp = HtmlResponse(url=URL_IT, status=status, body=b"", request=Request(URL_IT))
+        with pytest.raises(CloseSpider):
+            list(spider.parse_job(resp))
+        with pytest.raises(CloseSpider):
+            list(spider.parse_urlset(resp))
+    assert "900001" not in spider.seen  # trang bị chặn không tính là đã tải
