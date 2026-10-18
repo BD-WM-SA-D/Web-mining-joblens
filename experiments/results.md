@@ -32,6 +32,19 @@ Chỉ ghi số liệu, không ghi dữ liệu gốc. Mỗi số kèm snapshot d�
   - 9 câu tick "khó / cần bàn" → các quy tắc chốt vào guideline bản 0.3.
   - Lệnh: `uv run python -m annotation.export_bio --project 1 --batch skill_batch1` → `data/annotation/skill_batch1.bio.jsonl`.
 
+## WM2 – trích kỹ năng
+
+### Baseline từ điển trên dev `skill_batch1` (2026-10-18)
+
+| Tập | Câu | Span vàng | P | R | F1 (seqeval strict) |
+|---|---|---|---|---|---|
+| dev `skill_batch1` | 300 | 294 | 0,869 | 0,361 | 0,510 |
+
+- Lệnh: `uv run python -m ie.baseline_dict --bio data/annotation/skill_batch1.bio.jsonl`
+- **P trên dev bị đẩy lên:** 257/300 câu được gợi ý sẵn bằng chính từ điển này trước khi người gán sửa, và từ điển dựng từ tag VietJobs cùng nguồn. Số chính thức phải đo trên test `skill_test1` (TopCV, gán không có gợi ý).
+- Bỏ sót chủ yếu: (1) kỹ năng dạng cụm tiếng Việt không có trong từ điển (`vận hành máy CNC`, `vẽ tay`, `thiết kế thumbnail`, `mô hình dữ liệu`, `phân khúc khách hàng`); (2) tên công cụ ngoài top 200 (`Digiwin T100`, `IBM MQ`, `Katalon`, `Mastercam`, `ELK`); (3) một số alias thiếu dù có nhóm (`Agile`, `Scrum` khi viết "Agile/Scrum").
+- Gán thừa: `API` (quá chung theo guideline), `C` đứng riêng, "Agile/Scrum" khớp thành một span thay vì hai, và lệch ranh giới (`React` trong "ReactJS…", `phân tích yêu cầu` khi người gán lấy cụm dài hơn).
+
 ### Crawl thử TopCV (2026-10-12)
 
 - Lệnh: `uv run python -m crawler.topcv.run --max-jobs 20` (parser `topcv-parser:0.1.0`, bộ lọc slug bản đầu).
