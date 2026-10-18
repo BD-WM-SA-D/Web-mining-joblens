@@ -1,4 +1,4 @@
-# Hướng dẫn gán nhãn kỹ năng (WM2) – bản 0.2
+# Hướng dẫn gán nhãn kỹ năng (WM2) – bản 0.3
 
 Mục đích: tạo tập vàng (người gán) để đánh giá mô hình trích kỹ năng. Mỗi câu lấy từ mô tả hoặc yêu cầu của một tin tuyển dụng IT. Người gán bôi đen **từng kỹ năng cứng** trong câu, gán nhãn `SKILL`. Sau đó script đổi sang nhãn BIO (`B-SKILL`, `I-SKILL`, `O`) để tính F1 bằng seqeval (strict).
 
@@ -47,6 +47,11 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 8. **Tiếng Việt và tiếng Anh như nhau**: "kiểm thử tự động" và "automation testing" đều gán.
 9. **Tên sản phẩm, thiết bị kỹ thuật cụ thể** mà người làm phải vận hành thì gán: `Veeam Backup`, `HPE StoreOnce`, `SAN`. Tên hãng đứng một mình ("server HPE/DELL") thì không gán.
 10. **Chữ "..." hoặc "v.v." cuối danh sách** không nằm trong span: "Photoshop, AI, Corel..." → `Photoshop`, `AI`, `Corel`.
+11. **Tên đầy đủ kèm viết tắt trong ngoặc** thì gán hai span, không lấy dấu ngoặc: "trải nghiệm người dùng (UX)" → `trải nghiệm người dùng`, `UX`; "software development life cycle (SDLC)" → hai span.
+12. **Phiên bản đi sau tên** thì bỏ: "Javascript ES5/ES6+" → `Javascript`; "Spring Boot 3.x", "Angular 2+" → `Spring Boot`, `Angular`. Giữ số khi số là phần phân biệt tên quen dùng: `HTML5`, `CSS3`, `HTTP/1.1`, `HTTP/2`.
+13. **Lược từ** (hai kỹ năng dùng chung một chữ): chỉ gán phần **liền nhau và tự đủ nghĩa**; phần còn lại đứng một mình không rõ nghĩa thì bỏ. "thu thập, làm sạch và chuẩn hóa dữ liệu" → `chuẩn hóa dữ liệu`; "unit/integration test" → `integration test`; "thống kê mô tả & suy diễn" → `thống kê mô tả`. Không gộp cả cụm thành một span.
+14. **Từ bổ nghĩa** ở cuối cụm thì bỏ ("tối ưu truy vấn dữ liệu lớn" → `tối ưu truy vấn`); nằm giữa cụm thì giữ vì span phải liền ("quay short videos", "Phân tích các yêu cầu").
+15. **Giữ động từ khi bỏ đi thì mất nghĩa kỹ năng**: `thiết kế bao bì`, `Phát triển dashboard`, `vận hành máy CNC`. Bỏ động từ chung khi phần còn lại tự đủ nghĩa: "xây dựng framework kiểm thử tự động" → `framework kiểm thử tự động`; "viết unit test" → `unit test`.
 
 ## 4. Câu khó
 
@@ -101,6 +106,27 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 
 **Mạng xã hội, nền tảng:** chỉ là nơi đăng hay đối tượng ("video cho Tiktok", "fanpage Facebook") → không gán. Là công cụ phải vận hành ("Tiktok Ads", "Facebook Business Manager", "Shopee Seller Center") → gán.
 
+### Quy tắc chốt khi gán đợt 1 (bản 0.3)
+
+**Cách viết câu không quyết định, cụm từ quyết định.** Câu viết dạng nhiệm vụ ("Thực hiện review code"), yêu cầu ("Có kinh nghiệm QLDA"), quyền lợi ("Nhận đào tạo về CI/CD"), tiêu đề mục ("A. Phân tích yêu cầu nghiệp vụ") hay "lĩnh vực…" ("lĩnh vực phân tích dữ liệu") đều gán nếu cụm là tên kỹ năng. Ngược lại, cùng cụm từ nhưng câu dùng làm **tên của thứ khác** thì không gán: tên đội ("đội QA", "team Data Engineering"), tên tài liệu ("viết tài liệu (Thiết kế phần mềm…)"), tên chuyên ngành học ("chuyên ngành Thiết kế đồ họa"), định hướng của cấp trên ("dựa trên art direction của cấp trên").
+
+**Tên trước ngoặc / trước dấu ":"** – xem nó là gì:
+- Tên **loại công cụ** (message broker, container, observability, phần mềm CAM, công cụ DevSecOps, framework JavaScript, "backend với Spring Boot") → chỉ gán tên cụ thể đi kèm.
+- Tên **kỹ năng hay việc kỹ thuật** (ảo hóa, performance test, quản lý dự án) → gán cả nó lẫn tên cụ thể. Phép thử: "bạn biết làm ___ không?" nghe tự nhiên.
+- Đứng một mình, không có gì cụ thể đi kèm → gán: "hiểu biết về Backend, Frontend, Database", "công cụ DevSecOps" (không liệt kê), "dự án BPM" (không liệt kê).
+
+**Chỉ số và phương pháp:** chỉ số (CTR, KPI, ROI, ROAS, CPI, conversion rate, "hệ thống chỉ số đánh giá") → không gán. Phương pháp, kỹ thuật hay công cụ đo → gán: `OKR`, `A/B Testing`, `Uplift`, `coverage code`, `Google Analytics`.
+
+**Tài liệu và sản phẩm đầu ra đứng riêng** (backlog, roadmap, timeline, release plan, project charter, test case, test script, logo, bao bì, key visual, thumbnail, banner, dashboard) → không gán. Ghép với động từ chuyên môn thành tên kỹ năng → gán: `thiết kế thumbnail`, `viết test case`, `Thiết kế các banner`.
+
+**Chức danh và tên kỹ năng:** "bạn là ___ à?" (Team Lead, game designer, Project Manager, BA) → chức danh, không gán. "bạn biết ___ không?" (thiết kế game, sáng tạo nội dung) → kỹ năng, gán.
+
+**Từ quá chung đứng một mình:** "kiểm thử", "lập trình", "thiết kế", "phân tích", "quản lý tiến độ", "lập kế hoạch", "tích hợp hệ thống" → không gán. Có từ làm rõ thì gán: `kiểm thử tự động`, `kiểm tra hồi quy`, `quy trình kiểm thử phần mềm`, `phân tích dữ liệu`, `phân tích hành vi người dùng`, `Phân tích hiệu suất kinh doanh`, `quản lý dự án`, `quản lý rủi ro`.
+
+**Công nghệ cụ thể nằm trong danh sách lĩnh vực** vẫn gán: "lĩnh vực phần mềm ứng dụng, PKI, Ngân hàng" → `PKI`; "thanh toán, bảo hiểm, eKYC" → `eKYC`. Tên hãng đứng một mình thì không ("Meta, TikTok"); tên nền tảng quảng cáo thì gán (`Google Ads`, `Applovin`).
+
+**Quy định chung, nội quy** ("quy trình an toàn lao động") → không gán.
+
 ## 6. Quy trình
 
 1. Chuẩn bị dữ liệu (chạy một lần, dữ liệu nằm trong `data/`, không commit):
@@ -116,7 +142,11 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
    - Người thứ hai (đo κ): lọc cột `double = true`, gán trên một tài khoản khác, không xem nhãn của người kia.
 3. **Gán thử 100 câu** đầu, xem lại guideline, rồi gán tiếp.
 4. **Đo κ:** các câu có `double = true` (khoảng 10%) do người thứ hai gán độc lập. Tính Cohen's κ trên nhãn BIO mức token. Mục tiêu κ ≥ 0,7; thấp hơn thì bàn lại các câu lệch và sửa guideline.
-5. Export JSON từ Label Studio vào `data/annotation/` (không commit). Chỉ ghi số liệu (số câu, số span, κ) vào `experiments/results.md`.
+5. Export và đổi sang BIO (cần Personal Access Token của Label Studio trong `data/.ls_token`):
+   ```
+   uv run python -m annotation.export_bio --project <id> --batch skill_batch1
+   ```
+   Ghi bản export gốc và `<batch>.bio.jsonl` vào `data/annotation/` (không commit). Chỉ ghi số liệu (số câu, số span, κ) vào `experiments/results.md`.
 6. **Tập test `skill_test1`** (1.000 câu từ 125 tin TopCV, snapshot `topcv_v1`): tạo **project Label Studio riêng**, không trộn với đợt VietJobs `skill_batch1` (dev set). Tạo lại bằng:
    ```
    uv run python -m crawler.snapshot --source topcv --name topcv_v1
@@ -130,3 +160,4 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 |---|---|---|
 | 0.1 | 2026-10-07 | Bản đầu |
 | 0.2 | 2026-10-11 | Thêm chứng chỉ, sản phẩm đem bán, tên thiết bị; ví dụ từ đợt 1; các bước Label Studio |
+| 0.3 | 2026-10-18 | Chốt sau 300 câu dev: quy tắc span 11–15 (viết tắt trong ngoặc, phiên bản, lược từ, từ bổ nghĩa, giữ/bỏ động từ); mục "Quy tắc chốt khi gán đợt 1" (cụm từ quyết định, tên trước ngoặc, chỉ số, tài liệu đầu ra, chức danh, từ quá chung) |

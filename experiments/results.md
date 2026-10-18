@@ -23,8 +23,14 @@ Chỉ ghi số liệu, không ghi dữ liệu gốc. Mỗi số kèm snapshot d�
 
 - 1.507 câu từ 125 tin (seed 20261007), trong đó 153 câu của 12 tin được hai người gán để đo κ.
 - Lệnh: `uv run python -m annotation.sample_skill_batch --sentences 1500`
-- κ: `<...>` (chưa gán)
+- κ: `<...>` (153 câu `double` đã có nhãn người thứ nhất, chưa có người thứ hai)
 - Vai trò (quyết định 2026-10-12): **dev set / luyện guideline**, gán đến ~300 câu thì dừng. Tập test WM2 lấy từ tin TopCV tự crawl.
+- **Đã gán xong dev (2026-10-18):** 300 câu đầu (24 tin, 7.301 token), 1 người gán.
+  - 129 câu có kỹ năng, 171 câu rỗng (57%); 294 span SKILL.
+  - Gợi ý sẵn bằng từ điển (`annotation/preannotate_dict.py`, `dict-alias-v0`) cho 300 câu chưa gán; 59 câu có gợi ý, người gán giữ nguyên 20 câu, sửa 39 câu.
+  - Rà lại toàn bộ sau khi gán: sửa 13 câu sai hoặc lệch quy tắc; 15 span dính khoảng trắng/dấu câu ở mép được cắt tự động khi đổi BIO; 0 span lệch ranh giới token.
+  - 9 câu tick "khó / cần bàn" → các quy tắc chốt vào guideline bản 0.3.
+  - Lệnh: `uv run python -m annotation.export_bio --project 1 --batch skill_batch1` → `data/annotation/skill_batch1.bio.jsonl`.
 
 ### Crawl thử TopCV (2026-10-12)
 
