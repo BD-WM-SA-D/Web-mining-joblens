@@ -1,0 +1,132 @@
+# BẢN SAO – bản gốc: repo joblens schemas/api/mining.v1.yaml. Không sửa tại đây; đồng bộ: bash service/sync_contract.sh
+# Hợp đồng API dịch vụ khai phá trực tuyến (UC004, UC012, UC013) – ADR 0002. status: draft.
+# Repo cung cấp: Web-mining-joblens (image mining-service + image stub; BD triển khai trên K8s).
+# Repo gọi: PTTKHT-joblens (app). Khi không có JOBLENS_MINING_URL hoặc dịch vụ lỗi/quá 3 giây, app lùi về
+# trích bằng từ điển (gold.dim_skill.aliases) và gợi ý bằng đếm kỹ năng trùng (silver.job_skills).
+openapi: 3.1.0
+info:
+  title: JobLens Mining API
+  version: 0.1.0
+  description: >-
+    Trích kỹ năng từ văn bản người dùng (WM2) và gợi ý việc làm từ danh sách kỹ năng (WM5, content-based).
+    Dịch vụ không lưu văn bản đầu vào, không ghi log nội dung văn bản (ADR 0002, quyết định 3).
+    Chỉ trả job_uid và điểm; app tự lấy chi tiết tin từ silver.job_postings.
+servers:
+  - url: "{JOBLENS_MINING_URL}"
+    variables:
+      JOBLENS_MINING_URL:
+        default: http://localhost:8091
+paths:
+  /v1/skills:extract:
+    post:
+      operationId: extractSkills
+      summary: Trích kỹ năng từ văn bản (CV, mô tả bản thân, câu tìm kiếm)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExtractRequest" }
+      responses:
+        "200":
+          description: Kỹ năng tìm thấy, đã chuẩn hóa về skill_id của gold.dim_skill
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExtractResponse" }
+        "400":
+          description: Văn bản rỗng hoặc quá dài
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /v1/recommend:
+    post:
+      operationId: recommend
+      summary: Gợi ý tin đang mở cho một danh sách kỹ năng
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecommendRequest" }
+      responses:
+        "200":
+          description: Tin đã xếp hạng, mỗi dup_group_id chỉ một tin
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecommendResponse" }
+        "400":
+          description: Tham số sai
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /health:
+    get:
+      operationId: health
+      summary: Kiểm tra dịch vụ và phiên bản mô hình (app dùng để quyết định có lùi không)
+      responses:
+        "200":
+          description: Dịch vụ sẵn sàng
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+components:
+  schemas:
+    ExtractRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: { type: string, minLength: 1, maxLength: 20000, description: Văn bản tiếng Việt/Anh. Không được lưu }
+        min_confidence: { type: number, minimum: 0, maximum: 1, default: 0.5 }
+    ExtractResponse:
+      type: object
+      required: [skills, model_version]
+      properties:
+        skills:
+          type: array
+          items:
+            type: object
+            required: [skill_id, label, surface_form, start, end, confidence]
+            properties:
+              skill_id: { type: string, description: Như gold.dim_skill.skill_id }
+              label: { type: string }
+              surface_form: { type: string, description: Chuỗi gốc trong văn bản }
+              start: { type: integer, minimum: 0 }
+              end: { type: integer, minimum: 0 }
+              confidence: { type: number, minimum: 0, maximum: 1 }
+        model_version: { type: string, description: "Ví dụ skill-extractor:0.2.0 hoặc stub" }
+    RecommendRequest:
+      type: object
+      additionalProperties: false
+      required: [skill_ids]
+      properties:
+        skill_ids: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+        k: { type: integer, minimum: 1, maximum: 50, default: 10 }
+        location_codes: { type: array, items: { type: string }, description: Mã tỉnh (gold.dim_location) }
+        level_code: { type: string }
+    RecommendResponse:
+      type: object
+      required: [items, strategy, model_version]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [job_uid, score, matched_skill_ids, missing_skill_ids]
+            properties:
+              job_uid: { type: string, pattern: "^[0-9a-f]{40}$" }
+              score: { type: number }
+              matched_skill_ids: { type: array, items: { type: string } }
+              missing_skill_ids: { type: array, items: { type: string }, description: Kỹ năng tin yêu cầu mà hồ sơ chưa có }
+        strategy: { type: string, enum: [content_based, popularity, stub] }
+        model_version: { type: string }
+    Health:
+      type: object
+      required: [status, model_version]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        model_version: { type: string }
+        index_snapshot: { type: string, description: Snapshot Iceberg của silver.job_skills dùng để dựng chỉ mục gợi ý }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }

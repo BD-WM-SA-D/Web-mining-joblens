@@ -41,6 +41,7 @@ absa/          WM3 – khai phá quan điểm theo khía cạnh
 retrieval/     WM4 – BM25, hybrid
 recsys/        WM5 – gợi ý việc làm
 graph/         WM6 – đồ thị kỹ năng
+service/       mining-service (ADR 0002): API trích kỹ năng + gợi ý việc, hợp đồng schemas/api/mining.v1.yaml
 annotation/    guideline gán nhãn, chỉ số κ (không commit dữ liệu crawl thô hay file export nhãn)
 experiments/   notebook (đã xóa output) + kết quả, ghi rõ snapshot Iceberg đã dùng
 images/        Dockerfile cho job mô hình (skill-extractor, absa-scorer…)
@@ -48,6 +49,26 @@ models.yaml    danh mục model đã train: version, đường dẫn S3, metric,
 docs/          nguồn báo cáo Web Mining
 docs/adr/      ADR
 ```
+
+## mining-service (bản stub)
+
+API cho app (PTTKHT) theo hợp đồng `joblens/schemas/api/mining.v1.yaml`. Bản stub: trích kỹ năng bằng từ điển alias,
+gợi ý bằng đếm kỹ năng trùng trên snapshot TopCV `topcv_v1`. Sẽ thay bằng PhoBERT (WM2) và content-based (WM5) mà không
+đổi hợp đồng.
+
+```bash
+uv run python -m service.index                        # chỉ mục job_uid → skill_id (cần data/crawl/topcv/topcv_v1.parquet)
+uv run uvicorn service.app:app --port 8091            # hoặc image: images/mining-service/Dockerfile
+
+curl -s localhost:8091/health
+curl -s -X POST localhost:8091/v1/skills:extract -H 'Content-Type: application/json'   -d '{"text": "Yêu cầu 2 năm kinh nghiệm ReactJS, Node.js, MongoDB; biết Docker là lợi thế."}'
+curl -s -X POST localhost:8091/v1/recommend -H 'Content-Type: application/json'   -d '{"skill_ids": ["joblens:python", "joblens:sql"], "k": 3}'
+```
+
+- `skill_id` có dạng `joblens:<slug>` (chưa chuẩn hóa ESCO); lấy từ response của `/v1/skills:extract`.
+- Chưa làm: lọc `location_codes` / `level_code` (tham số được nhận nhưng bỏ qua), gộp theo `dup_group_id` (chờ WM1).
+- Không lưu, không log văn bản người dùng. Lỗi đầu vào trả `400 {"error": …}`.
+- Test hợp đồng: `uv run pytest tests/test_mining_service.py`; đồng bộ lại hợp đồng: `bash service/sync_contract.sh`.
 
 ## Tài liệu
 
