@@ -40,10 +40,29 @@ Chỉ ghi số liệu, không ghi dữ liệu gốc. Mỗi số kèm snapshot d�
 |---|---|---|---|---|---|
 | dev `skill_batch1` | 300 | 294 | 0,869 | 0,361 | 0,510 |
 
-- Lệnh: `uv run python -m ie.baseline_dict --bio data/annotation/skill_batch1.bio.jsonl`
+- F1 khoảng tin cậy 95% (bootstrap 1.000 lần theo câu): [0,440; 0,582] – dev chỉ 300 câu nên khoảng còn rộng.
+- Lệnh: `uv run python -m ie.baseline_dict --bio data/annotation/skill_batch1.bio.jsonl --eval-set skill_batch1 --split dev` (ghi thêm `experiments/runs/<run_id>.json`)
 - **P trên dev bị đẩy lên:** 257/300 câu được gợi ý sẵn bằng chính từ điển này trước khi người gán sửa, và từ điển dựng từ tag VietJobs cùng nguồn. Số chính thức phải đo trên test `skill_test1` (TopCV, gán không có gợi ý).
 - Bỏ sót chủ yếu: (1) kỹ năng dạng cụm tiếng Việt không có trong từ điển (`vận hành máy CNC`, `vẽ tay`, `thiết kế thumbnail`, `mô hình dữ liệu`, `phân khúc khách hàng`); (2) tên công cụ ngoài top 200 (`Digiwin T100`, `IBM MQ`, `Katalon`, `Mastercam`, `ELK`); (3) một số alias thiếu dù có nhóm (`Agile`, `Scrum` khi viết "Agile/Scrum").
 - Gán thừa: `API` (quá chung theo guideline), `C` đứng riêng, "Agile/Scrum" khớp thành một span thay vì hai, và lệch ranh giới (`React` trong "ReactJS…", `phân tích yêu cầu` khi người gán lấy cụm dài hơn).
+
+### Nhãn yếu cho train PhoBERT `wm2_weak_v1` (2026-11-09)
+
+- Cách gán: tag kỹ năng của chính tin (VietJobs `technical_skills`, TopCV `skill_tags`; bỏ kỹ năng mềm theo từ vựng
+  `soft_skills` của VietJobs, bỏ tag > 5 token) cộng từ điển alias, dò khớp dài nhất trên token.
+- Loại toàn bộ 250 tin thuộc dev `skill_batch1` và test `skill_test1` (theo job_uid trong manifest).
+- Kết quả: 1.781 tin VietJobs + 179 tin TopCV → 24.144 câu, 6.438 câu có kỹ năng (27%), 14.390 span.
+- Độ nhiễu, đo bằng cách áp cùng cách gán lên 300 câu dev đã gán tay (seqeval strict):
+
+| Cách gán | P | R | F1 |
+|---|---|---|---|
+| Chỉ từ điển (= baseline) | 0,869 | 0,361 | 0,510 |
+| Chỉ tag của tin | 0,757 | 0,180 | 0,291 |
+| Tag + từ điển (dùng cho train) | 0,799 | 0,405 | 0,537 |
+
+- Nhận xét: nhãn yếu bắt được ~40% kỹ năng thật → mô hình train trên đó dễ học thói "bỏ sót" (câu có kỹ năng nhưng bị
+  gán toàn O). Hướng xử lý khi train: bỏ bớt câu không có span nào, hoặc chỉ tính loss trên token đã gán B/I.
+- Lệnh: `uv run python -m ie.weak_labels` → `data/weak/wm2_weak_v1.bio.jsonl`
 
 ### Crawl thử TopCV (2026-10-12)
 
