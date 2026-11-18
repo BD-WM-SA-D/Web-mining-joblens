@@ -52,6 +52,69 @@ PhoBERT v1 mang `217f81c-dirty` (số dev, không phải số báo cáo). Hai l�
 | WM6 | Khớp | |
 | Nhu cầu kỹ năng | Chạy được | |
 
+## Độ bền với nhiễu – đăng ký trước (2026-11-18, ghi TRƯỚC khi chạy)
+
+Câu hỏi: dedup (WM1) và trích kỹ năng (WM2) giữ được bao nhiêu khi văn bản tin bị biến dạng như ngoài thực tế
+(đăng lại không dấu, thêm chữ vào tiêu đề, gõ sai, cắt bớt mô tả)? **Chỉ đo, không chỉnh hệ nào**: hệ, ngưỡng,
+từ điển, model giữ nguyên như số đã báo; tập đánh giá là 300 cặp WM1 (nhãn 0.2) và `skill_test1` (WM2).
+Nhãn không đổi vì nhiễu không đổi nghĩa tin. Cùng ý tưởng với thí nghiệm nhiễu của Big Data nhưng khác đối
+tượng: BD đo pipeline chuẩn hóa trường có sẵn, ở đây đo mô hình khai phá; code và số viết riêng.
+
+| Nhiễu | WM1: áp vào | WM2: áp vào | Cách làm |
+|---|---|---|---|
+| `bo_dau` | tiêu đề + mô tả + yêu cầu | mọi token | bỏ dấu tiếng Việt (đ → d) |
+| `go_sai` | mô tả + yêu cầu | mọi câu | đảo hai ký tự kề nhau ở giữa 10% số từ dài ≥ 4 |
+| `tieu_de_them` | tiêu đề | – | thêm một trong "(Tuyển gấp)", "- Lương upto 2000$", "[Hà Nội]", "- Urgent" |
+| `cat_mo_ta` | mô tả + yêu cầu | – | giữ 60% số ký tự đầu |
+| `chu_thuong` | – | mọi token | chữ thường hết |
+
+- WM1: mỗi tin bị nhiễu độc lập với xác suất **0,5** (để khoảng một nửa số cặp có hai bản khác nhau), seed
+  20261118. Báo P/R/F1 của baseline, v1, v2 cho từng loại nhiễu cạnh số khi không nhiễu.
+- WM2: mọi câu của TEST bị nhiễu (go_sai: 10% từ). Báo F1 strict của từ điển và PhoBERT v3 (3 seed, trung bình).
+- Dự đoán trước (để đối chiếu, không để chọn): baseline khóa tiêu đề hỏng nặng với `tieu_de_them` và `bo_dau`;
+  MinHash chịu `go_sai` tốt hơn khóa tiêu đề; từ điển hỏng nặng với `bo_dau`, PhoBERT ít hơn.
+
+### Kết quả độ bền (2026-11-18, chạy một lần theo đăng ký trên)
+
+**WM1** – 300 cặp, nhãn 0.2 (13 cặp trùng; mỗi cặp trùng bắt được hay không làm R đổi 0,077, nên chỉ đọc
+chênh lệch lớn):
+
+| Nhiễu | baseline P / R / F1 | v1 P / R / F1 | v2 P / R / F1 | cặp có bản nhiễu |
+|---|---|---|---|---|
+| không | 1,000 / 0,385 / 0,556 | 0,323 / 0,769 / 0,455 | 0,556 / 0,769 / **0,645** | 0 |
+| `bo_dau` | 1,000 / 0,231 / 0,375 | 0,333 / 0,538 / 0,412 | 0,571 / 0,615 / 0,593 | 138 |
+| `go_sai` | 1,000 / 0,385 / 0,556 | 0,500 / 0,692 / 0,581 | 0,667 / 0,615 / 0,640 | 238 |
+| `tieu_de_them` | 1,000 / 0,308 / 0,471 | 0,310 / 0,692 / 0,429 | 0,556 / 0,769 / **0,645** | 222 |
+| `cat_mo_ta` | 1,000 / 0,385 / 0,556 | 0,429 / 0,462 / 0,444 | 0,500 / 0,538 / **0,519** | 231 |
+
+- Đúng dự đoán: khóa tiêu đề chính xác (baseline) mất cặp trùng khi tiêu đề bị thêm chữ (R 0,385 → 0,308) hoặc
+  mất dấu (→ 0,231). **v2 không bị `tieu_de_them` ảnh hưởng** (vẫn 0,645): tiêu đề mềm bỏ được địa điểm và
+  ngoặc, phần còn lại do MinHash trên mô tả gánh.
+- Điểm yếu thật của v2 là **mô tả bị cắt** (F1 0,645 → 0,519): MinHash so tập shingle nên bản ngắn hơn 40% kéo
+  Jaccard xuống dưới 0,5. Bỏ dấu cũng làm mất 2/10 cặp v2 đang bắt.
+- Gõ sai 10% từ gần như không ảnh hưởng v2; với v1 còn làm *tăng* P (báo nhầm cùng công ty có Jaccard sát 0,5
+  bị đẩy xuống dưới ngưỡng) – không phải ưu điểm, chỉ là các cặp sát ngưỡng.
+
+**WM2** – `skill_test1`, 1.000 câu, mọi câu bị nhiễu:
+
+| Nhiễu | từ điển F1 | PhoBERT v3 F1 (seed 1 / 2 / 3) | PhoBERT TB | PhoBERT − từ điển |
+|---|---|---|---|---|
+| không | 0,442 | 0,616 / 0,618 / 0,617 | **0,617** | +0,175 |
+| `bo_dau` | 0,426 | 0,519 / 0,527 / 0,518 | 0,521 (−0,096) | +0,095 |
+| `chu_thuong` | 0,398 | 0,552 / 0,550 / 0,559 | 0,554 (−0,063) | +0,156 |
+| `go_sai` | 0,417 | 0,600 / 0,599 / 0,601 | 0,600 (−0,017) | +0,183 |
+
+- **Sai dự đoán:** bỏ dấu làm PhoBERT tụt nhiều hơn từ điển (−0,096 so với −0,016). Lý do: từ điển chủ yếu là
+  tên kỹ năng Latin (Java, Docker…) vốn không có dấu, còn PhoBERT dựa vào ngữ cảnh tiếng Việt có dấu và mất phần
+  lớn cụm tiếng Việt ("kiểm thử tự động" → "kiem thu tu dong" là chuỗi PhoBERT chưa từng thấy). PhoBERT vẫn hơn
+  từ điển ở mọi loại nhiễu.
+- Chữ thường làm cả hai cùng tụt: từ điển vì alias ≤ 3 ký tự phân biệt hoa thường ("AI", "Go"), PhoBERT vì
+  mất tín hiệu viết hoa của tên riêng.
+- Ứng dụng: nếu nguồn tin mới đăng không dấu (một số trang tổng hợp), nên báo F1 kỳ vọng khoảng 0,52 chứ không
+  phải 0,62. Không sửa gì trên TEST; muốn bền hơn với bỏ dấu thì thử thêm bản không dấu vào nhãn yếu, chọn trên dev.
+
+Lệnh: `uv run python -m experiments.robustness wm1`, `uv run python -m experiments.robustness wm2`.
+
 ## Dữ liệu
 
 > Dữ liệu chính là tin tự crawl (TopCV, ITviec). VietJobs chỉ dùng cho nhãn yếu, từ điển alias và baseline – không dùng làm tập test.

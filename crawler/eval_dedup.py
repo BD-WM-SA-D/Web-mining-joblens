@@ -75,14 +75,20 @@ def prf(gold: list[bool], pred: list[bool], w: list[float] | None = None) -> tup
     return p, r, (2 * p * r / (p + r) if p + r else 0.0)
 
 
-def load(rows: list[dict]) -> tuple[list[dict], pd.DataFrame, dict[str, int]]:
+def snapshot_df() -> pd.DataFrame:
+    man = json.loads(MANIFEST.read_text("utf-8"))
+    df = pd.concat([pd.read_parquet(ROOT / s) for s in man["snapshots"]], ignore_index=True)
+    return df.drop_duplicates("job_uid")
+
+
+def load(rows: list[dict], df: pd.DataFrame | None = None) -> tuple[list[dict], pd.DataFrame, dict[str, int]]:
+    """Gắn đặc trưng của từng cặp. `df` khác None: dùng bảng tin đó (thí nghiệm nhiễu) thay cho snapshot."""
     man = json.loads(MANIFEST.read_text("utf-8"))
     for r in rows:
         p = man["pairs"][r["index"]]
         assert (p["a"], p["b"]) == (r["a"], r["b"]), "nhãn không khớp manifest"
         r["stratum"] = p["stratum"]
-    df = pd.concat([pd.read_parquet(ROOT / s) for s in man["snapshots"]], ignore_index=True)
-    df = df.drop_duplicates("job_uid")
+    df = snapshot_df() if df is None else df
     src = dict(zip(df["job_uid"], df["source"], strict=True))
     base, base_soft = baseline_pairs(df), baseline_pairs(df, soft=True)
     full, cut = shingle_sets(df), shingle_sets(df, strip=True)

@@ -195,11 +195,22 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=20261113)
     ap.add_argument("--batch", default="dedup_batch1")
     ap.add_argument("--keep", type=Path, help="JSON danh sách {stratum, a, b} đã gán nhãn – giữ nguyên khi rút lại")
+    ap.add_argument(
+        "--exclude",
+        type=Path,
+        nargs="*",
+        default=[],
+        help="manifest của lô khác (vd lô TEST dedup_batch1): bỏ mọi cặp đã có trong đó – dùng khi rút lô dev",
+    )
     args = ap.parse_args()
 
     df = pd.concat([pd.read_parquet(p) for p in args.snapshots], ignore_index=True).drop_duplicates("job_uid")
     src = dict(zip(df["job_uid"], df["source"], strict=True))
     strata = build_strata(df)
+    banned = {tuple(sorted((p["a"], p["b"]))) for m in args.exclude for p in json.loads(m.read_text("utf-8"))["pairs"]}
+    if banned:
+        strata = {k: [p for p in v if tuple(sorted(p)) not in banned] for k, v in strata.items()}
+        print(f"bỏ {len(banned)} cặp của {[m.name for m in args.exclude]}")
     print(f"{len(df)} tin ({df['source'].value_counts().to_dict()})")
     for name in STRATA:
         pool = strata.get(name, [])
@@ -223,6 +234,7 @@ def main() -> None:
         "max_per_job": MAX_PER_JOB,
         "max_per_company": MAX_PER_COMPANY,
         "kept_labeled": len(keep),
+        "excluded_from": [_rel(m) for m in args.exclude],
         "pairs": pairs,
     }
     (OUT_DIR / f"{args.batch}.manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), "utf-8")

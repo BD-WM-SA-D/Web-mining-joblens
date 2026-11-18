@@ -1,0 +1,20 @@
+# Ngữ cảnh build image (images/*/Dockerfile) – chỉ đưa vào thứ image cần. data/ nặng vài GB và có dữ liệu crawl.
+.git
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+data/*
+# mining-service: chỉ mục kỹ năng
+!data/index
+# image batch bản full: model PhoBERT v3 seed 1, 200 câu dev ABSA để train mô hình lai lúc khởi động
+!data/models
+data/models/*
+!data/models/wm2-phobert-v3-s1
+!data/annotation
+data/annotation/*
+!data/annotation/absa_trial.absa.jsonl
+!data/annotation/absa_dev2.absa.jsonl
+!data/absa
+data/absa/*
+!data/absa/sentences.jsonl
