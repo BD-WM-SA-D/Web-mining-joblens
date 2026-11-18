@@ -26,8 +26,8 @@
   "runtime": {},
   "repro": {
     "command": "C:\\Users\\hoang le\\joblens\\repos\\Web-mining-joblens\\ie\\phobert.py eval --weak v3 --model data/models/wm2-phobert-v3-s1 --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed 1",
-    "git_commit": "217f81c-dirty",
+    "git_commit": "a2f03a8",
     "models_yaml": null
   },
-  "created_at": "2026-11-18T16:41:18+07:00"
+  "created_at": "2026-11-18T17:00:03+07:00"
 }

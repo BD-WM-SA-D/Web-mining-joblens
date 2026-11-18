@@ -35,9 +35,11 @@ Lệnh: `uv run python -m experiments.diag_wm2`, `uv run python -m experiments.d
 
 ## Chạy lại một lượt (2026-11-18)
 
-`bash experiments/run_all.sh` chạy lại mọi số chính thức (33 bước, ~55 phút gồm train lại PhoBERT v1),
-không crawl. Commit `217f81c-dirty` – **chưa phải lượt chạy trên commit sạch**. Log: `data/logs/run_all-20261118-1555`
-và `-1641`. Kết quả so với số đã ghi:
+`bash experiments/run_all.sh` chạy lại mọi số chính thức, không crawl. Lượt đầu trên `217f81c-dirty`
+(train lại PhoBERT v1, ~55 phút; log `data/logs/run_all-20261118-1555` và `-1641`). **Lượt chính thức trên
+commit sạch `a2f03a8`** (31 bước, ~17 phút, log `data/logs/run_all-20261118-1655`): mọi file
+`experiments/runs/2026-11-18-*-test-*.json` ghi `git_commit: a2f03a8`; chỉ còn 6 file dev của lần train lại
+PhoBERT v1 mang `217f81c-dirty` (số dev, không phải số báo cáo). Hai lượt ra cùng số. Kết quả so với số đã ghi:
 
 | Bài | Khớp? | Ghi chú |
 |---|---|---|

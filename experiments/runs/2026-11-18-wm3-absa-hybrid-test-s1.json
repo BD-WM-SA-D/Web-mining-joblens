@@ -26,12 +26,12 @@
   },
   "ci95": {},
   "runtime": {
-    "minutes": 0.06
+    "minutes": 0.07
   },
   "repro": {
     "command": "uv run python -m absa.supervised test --model hybrid",
-    "git_commit": "217f81c-dirty",
+    "git_commit": "a2f03a8",
     "models_yaml": null
   },
-  "created_at": "2026-11-18T16:38:14+07:00"
+  "created_at": "2026-11-18T17:09:51+07:00"
 }
