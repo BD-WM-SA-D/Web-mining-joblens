@@ -52,7 +52,10 @@ def _git_commit() -> str | None:
         sha = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"], cwd=root, capture_output=True, text=True, check=True
         ).stdout.strip()
-        dirty = subprocess.run(["git", "diff", "--quiet", "HEAD"], cwd=root).returncode != 0
+        dirty = (
+            subprocess.run(["git", "diff", "--quiet", "HEAD", "--", ".", ":!experiments/runs"], cwd=root).returncode
+            != 0
+        )
         return sha + ("-dirty" if dirty else "")
     except (OSError, subprocess.CalledProcessError):
         return None

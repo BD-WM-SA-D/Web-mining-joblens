@@ -28,7 +28,7 @@ step() {  # step <tên> <lệnh…>
 }
 py() { uv run python -m "$@"; }
 
-echo "commit: $(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . ':!data' || echo -dirty)" | tee "$LOG/_tong.txt"
+echo "commit: $(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . ':!data' ':!experiments/runs' || echo -dirty)" | tee "$LOG/_tong.txt"
 
 # WM1 – dedup. Baseline: khóa tiêu đề + công ty. So: v1 (∪ MinHash), v2 (tiêu đề mềm ∪ MinHash cắt khung).
 step wm1_dedup_nhan01  py crawler.eval_dedup
