@@ -1,0 +1,61 @@
+<!-- Cấu hình Label Studio cho WM3 (khía cạnh + cảm xúc, mức câu). Hướng dẫn: annotation/guideline_absa.md
+     Mỗi khía cạnh là một dòng ba nút, KHÔNG bắt buộc: để trống = câu không nhắc tới khía cạnh đó.
+     KHÔNG hiện điểm sao của review: sao là nhãn yếu, nhìn vào sẽ gán theo sao chứ không theo câu. -->
+<View>
+  <Header value="Câu này nói về khía cạnh nào, và thái độ ra sao? (xem guideline_absa.md)"/>
+
+  <!-- KHÔNG đặt màu nền cố định: Label Studio có chế độ Dark, nền sáng cứng + chữ trắng của theme
+       thành trắng trên trắng, không đọc được. Chỉ dùng viền và cỡ chữ. -->
+  <View style="padding: 0.8em; border: 1px solid #888; border-radius: 6px; font-size: 1.15em">
+    <Text name="text" value="$text"/>
+  </View>
+  <Text name="ctx" value="Công ty: $company_name · phần: $section · ngôn ngữ: $lang"/>
+
+  <Header value="Lương và phúc lợi" size="5"/>
+  <Choices name="salary_benefits" toName="text" choice="single" showInline="true">
+    <Choice value="positive" hotkey="q"/>
+    <Choice value="neutral" hotkey="w"/>
+    <Choice value="negative" hotkey="e"/>
+  </Choices>
+
+  <Header value="Đào tạo và học hỏi" size="5"/>
+  <Choices name="training_learning" toName="text" choice="single" showInline="true">
+    <Choice value="positive"/>
+    <Choice value="neutral"/>
+    <Choice value="negative"/>
+  </Choices>
+
+  <Header value="Quản lý và quan tâm nhân viên" size="5"/>
+  <Choices name="management_care" toName="text" choice="single" showInline="true">
+    <Choice value="positive"/>
+    <Choice value="neutral"/>
+    <Choice value="negative"/>
+  </Choices>
+
+  <Header value="Văn hóa và đồng nghiệp" size="5"/>
+  <Choices name="culture_fun" toName="text" choice="single" showInline="true">
+    <Choice value="positive"/>
+    <Choice value="neutral"/>
+    <Choice value="negative"/>
+  </Choices>
+
+  <Header value="Văn phòng và chỗ làm việc" size="5"/>
+  <Choices name="office_workspace" toName="text" choice="single" showInline="true">
+    <Choice value="positive"/>
+    <Choice value="neutral"/>
+    <Choice value="negative"/>
+  </Choices>
+
+  <Header value="Cân bằng công việc / OT" size="5"/>
+  <Choices name="work_life_balance" toName="text" choice="single" showInline="true">
+    <Choice value="positive"/>
+    <Choice value="neutral"/>
+    <Choice value="negative"/>
+  </Choices>
+
+  <Choices name="flag" toName="text" choice="single" showInline="true">
+    <Choice value="khó / cần bàn"/>
+    <Choice value="không gán được (câu vô nghĩa, lẫn ngôn ngữ)"/>
+  </Choices>
+  <TextArea name="comment" toName="text" placeholder="Ghi chú (không bắt buộc)" rows="1"/>
+</View>

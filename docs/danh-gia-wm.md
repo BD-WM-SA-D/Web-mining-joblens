@@ -43,7 +43,8 @@ Mỗi mục có cùng 5 phần:
   - Tag "Kỹ năng cần có" do nhà tuyển dụng tự gắn **lẫn nhiều kỹ năng mềm**: trong top 6 tag có "Giao tiếp" (14) và "Làm việc nhóm" (11). Không dùng thẳng tag làm nhãn kỹ năng cứng được; đây là lý do cần WM2.
   - **Bài học vận hành:** sự cố ngày 12/10 có 4.673/5.507 request bị HTTP 429, vì cơ chế tự điều tiết của Scrapy rút ngắn khoảng cách khi lỗi trả về nhanh. Sau đó spider dừng ngay khi gặp 429/403, giãn ≥ 3 giây, crawl theo đợt nhỏ. Crawl "lịch sự" phải được **đo** bằng mã HTTP, không chỉ cấu hình.
   - **Pháp lý định hình phạm vi:**
-    - Điều khoản ITviec (2.2) yêu cầu đồng ý bằng văn bản, nên chưa crawl ITviec.
+    - Điều khoản ITviec (mục 2.2, bản 01/07/2023) yêu cầu đồng ý trước bằng văn bản cho việc truy xuất, tải xuống nội dung, trừ sử dụng cá nhân hợp lý. robots.txt chỉ chặn `/subscriptions/new`. Kế hoạch ban đầu là chưa crawl cho tới khi được đồng ý.
+    - **Thực tế (quyết định 2026-11-17: giữ ITviec):** đã crawl ITviec ở quy mô nhỏ (144 trang review, 536 tin, ≤ 1 request/3 giây, không đăng nhập, chỉ phần công khai). Đồng ý bằng văn bản: `<chưa có / ngày gửi email, ngày trả lời>`. Ý kiến giảng viên: `<...>`. Giới hạn tự đặt: chỉ dùng cho môn học; không công khai lại dữ liệu hay HTML thô; không commit lên git; demo chỉ hiện kết quả phân tích kèm link gốc, không đăng lại nguyên văn review; không lưu tên người review.
     - TopCV cho phép trang tin trong robots.txt và cấm đường dẫn CV, nên crawler chặn cứng các đường dẫn đó.
 - **Giúp sản phẩm:** dữ liệu tin mới, có `date_posted`, cho phép thống kê theo thời gian. Bộ dữ liệu công khai VietJobs không có ngày đăng.
 
@@ -132,7 +133,7 @@ Mỗi mục có cùng 5 phần:
   - Khía cạnh nào bị chê nhiều nhất trong ngành IT (`<...>`).
   - Mô hình nhầm trung tính với tiêu cực ở đâu.
   - Tổng hợp từ mô hình có khớp điểm sao của người viết không.
-- **Phụ thuộc:** cần nguồn review hợp lệ (đang chờ ITviec, kiểm tra nguồn thay thế).
+- **Phụ thuộc:** toàn bộ WM3 dùng review công khai ITviec (144 review). Căn cứ sử dụng xem mục 2.1; nếu ITviec từ chối thì phải đổi nguồn và gán lại.
 - **Giúp sản phẩm:** UC "xem công ty bị chê về gì" trước khi ứng tuyển.
 
 ### 2.7 WM5: Độ phổ biến → content-based (TF-IDF, trùng kỹ năng) (RQ5)
@@ -201,7 +202,7 @@ Mỗi mục có cùng 5 phần:
 ## 4. Bài học xuyên suốt (dùng cho phần Thảo luận)
 
 1. **Chất lượng và quyền sử dụng dữ liệu quyết định phạm vi nhiều hơn mô hình.**
-   - Điều khoản ITviec khiến nhóm đổi nguồn.
+   - Điều khoản ITviec yêu cầu đồng ý bằng văn bản; nhóm vẫn dùng dữ liệu công khai ở quy mô nhỏ cho học tập và phải nêu rõ điều này (mục 2.1, mục 5).
    - 44% tin ẩn lương làm thống kê lương lệch.
    - Tag của nhà tuyển dụng lẫn kỹ năng mềm.
 2. **Định nghĩa nhãn là phần khó nhất của trích kỹ năng,** không phải mô hình. Guideline phải chốt nhiều quy tắc ranh giới mới gán nhất quán được.
@@ -213,6 +214,7 @@ Mỗi mục có cùng 5 phần:
 
 - **Phần lớn nhãn do một người gán;** κ chỉ đo trên ~10%.
 - **Log người dùng của WM5 là synthetic.** Kết luận chính dựa trên tập chấm tay nhỏ (30 hồ sơ).
+- **Quyền sử dụng dữ liệu ITviec:** điều khoản mục 2.2 yêu cầu đồng ý bằng văn bản. Trạng thái xin phép: `<...>`. Mọi kết quả WM3 và phần ITviec của WM1 phụ thuộc vào điểm này.
 - **Dữ liệu:** một đến hai trang, khoảng 2 tháng tin đang mở, chỉ ngành IT. Không suy rộng cho toàn thị trường.
 - **Tập test WM2 lấy từ cùng snapshot với dữ liệu crawl,** nhưng chọn theo tin, không trùng tin train.
 - **Dev WM2 có gợi ý từ điển,** nên số trên dev chỉ để chọn tham số, không để báo cáo.

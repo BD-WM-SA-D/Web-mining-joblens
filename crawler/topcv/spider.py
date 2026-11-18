@@ -66,6 +66,7 @@ class TopcvSpider(scrapy.Spider):
         self,
         max_jobs: int = 20,
         max_sitemaps: int = 1,
+        skip_sitemaps: int = 0,
         since: str | None = None,
         it_only: bool = True,
         slug_filter: bool = True,
@@ -76,6 +77,8 @@ class TopcvSpider(scrapy.Spider):
         super().__init__(**kwargs)
         self.max_jobs = int(max_jobs)
         self.max_sitemaps = int(max_sitemaps)
+        # Bỏ qua N sitemap con đầu: chia việc đọc 220 sitemap thành nhiều ngày, mỗi ngày vài trăm request
+        self.skip_sitemaps = int(skip_sitemaps)
         self.since = since  # chỉ lấy URL có lastmod >= since (ISO), cho crawl tăng dần
         self.it_only = str(it_only).lower() not in {"0", "false", "no"}
         self.slug_filter = str(slug_filter).lower() not in {"0", "false", "no"}
@@ -133,7 +136,7 @@ class TopcvSpider(scrapy.Spider):
     def parse_index(self, response):
         check_not_blocked(response)
         _, children = parse_sitemap(response.body)
-        for child in children[: self.max_sitemaps]:
+        for child in children[self.skip_sitemaps : self.skip_sitemaps + self.max_sitemaps]:
             yield scrapy.Request(child.loc, callback=self.parse_urlset)
 
     def parse_urlset(self, response):

@@ -167,3 +167,18 @@ def test_spider_stops_on_rate_limit(tmp_path):
         with pytest.raises(CloseSpider):
             list(spider.parse_urlset(resp))
     assert "900001" not in spider.seen  # trang bị chặn không tính là đã tải
+
+
+def test_skip_sitemaps(tmp_path):
+    """--skip-sitemaps bỏ qua N sitemap con đầu để chia việc crawl theo ngày."""
+    kw = {"out_dir": str(tmp_path / "day"), "state_dir": str(tmp_path)}
+    index = _resp("https://www.topcv.vn/sitemap/jobs.xml", SITEMAP_INDEX)
+    _, children = parse_sitemap(SITEMAP_INDEX)
+    assert len(children) >= 2, "fixture cần ít nhất 2 sitemap con"
+
+    first = TopcvSpider(max_sitemaps=1, **kw)
+    second = TopcvSpider(max_sitemaps=1, skip_sitemaps=1, **kw)
+    assert [r.url for r in first.parse_index(index)] == [children[0].loc]
+    assert [r.url for r in second.parse_index(index)] == [children[1].loc]
+    # bỏ qua quá số sitemap có thật thì không gửi request nào
+    assert list(TopcvSpider(max_sitemaps=5, skip_sitemaps=99, **kw).parse_index(index)) == []

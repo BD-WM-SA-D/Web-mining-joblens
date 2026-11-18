@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- HTML MẪU TỰ SOẠN để test parser. Cấu trúc rút gọn theo trang thật đã xem ngày 2026-11-12
+     (/nha-tuyen-dung/ntt-data-vietnam/danh-gia), svg sao đã lược bỏ.
+     Có 1 review công khai thật + 1 khối bị che (details-review blur, văn bản giả) + 1 khối rỗng. -->
+<html>
+<head><title>3 Review việc làm tại ABC Software | ITviec</title></head>
+<body>
+<h1>ABC Software</h1>
+
+<!-- review công khai thật -->
+<div class='py-4 border-bottom-dashed'>
+<div class='ipb-4'>
+<span class='ifs-14 text-dark-grey fw-400'>
+Tháng Mười 2026
+</span>
+<h3 class='text-it-black'>Môi trường tốt cho junior</h3>
+<div class='d-flex align-items-center imt-1'>
+<p class='ims-3 ime-1'>4</p>
+<ul class='detail-rating-tooltip small-text py-2 px-4'>
+<li class='d-flex align-items-center py-2'><p class='w-50'>Lương thưởng &amp; phúc lợi</p><p class='ims-2'>3</p></li>
+<li class='d-flex align-items-center py-2'><p class='w-50'>Đào tạo &amp; học hỏi</p><p class='ims-2'>5</p></li>
+<li class='d-flex align-items-center py-2'><p class='w-50 text-nowrap'>Sự quan tâm đến nhân viên</p><p class='ims-2'>4</p></li>
+<li class='d-flex align-items-center py-2'><p class='w-50'>Văn hoá công ty</p><p class='ims-2'>4</p></li>
+<li class='d-flex align-items-center py-2'><p class='w-50'> Văn phòng làm việc</p><p class='ims-2'>4</p></li>
+</ul>
+</div>
+<div class='recommend-icon-wrapper'>
+Khuyến khích
+</div>
+</div>
+
+<div class='pb-2 text-it-black'>
+<h4>Điều tôi thích:</h4>
+<p class='normal-text paragraph'>
+<p>Mentor nhiệt tình, được học công nghệ mới. Liên hệ anh Nam 0912345678 để biết thêm.</p>
+</p>
+</div>
+<div class='feedback text-it-black paragraph'>
+<h4>Đề nghị cải thiện:</h4>
+<div class='panel-paragraph pb-15 text-break'>
+<p>Nên xem lại quy trình review lương. Email hr@abc.vn trả lời chậm.</p>
+</div>
+</div>
+</div>
+
+<!-- khối BỊ CHE: văn bản giả, phải bị parser loại -->
+<div class='py-4 border-bottom-dashed'>
+<div class='ipb-4'>
+<span class='ifs-14 text-dark-grey fw-400'>
+Tháng Ba 2026
+</span>
+<h3 class='text-it-black'>Đánh giá chung</h3>
+<p class='ims-3 ime-1'>2</p>
+<ul class='detail-rating-tooltip small-text py-2 px-4'>
+<li class='d-flex align-items-center py-2'><p class='w-50'>Lương thưởng &amp; phúc lợi</p><p class='ims-2'>2</p></li>
+</ul>
+<div class='recommend-icon-wrapper'>Không khuyến khích</div>
+</div>
+<span class='text-it-black'>Đăng nhập để xem tất cả đánh giá.</span>
+<div class='details-review blur'>
+<div class='what-you-liked'>
+<p>Điều tôi thích</p>
+<div class='panel-paragraph pb-15'><p>The salary is really good, the manager always tries to increase my salary before I request.</p></div>
+<div class='feedback ipt-3'>
+<p>Đề nghị cải thiện</p>
+<div class='panel-paragraph pb-15'><p>Boss is like a friend.</p></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- khối chỉ có điểm sao, không có phần văn bản -->
+<div class='py-4 border-bottom-dashed'>
+<div class='ipb-4'>
+<span class='ifs-14 text-dark-grey fw-400'>01/2025</span>
+<p class='ims-3 ime-1'>5</p>
+</div>
+</div>
+
+</body>
+</html>

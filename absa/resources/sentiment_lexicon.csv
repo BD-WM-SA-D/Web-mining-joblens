@@ -1,0 +1,125 @@
+polarity,term,lang
+positive,tốt,vi
+positive,rất tốt,vi
+positive,ổn,vi
+positive,khá ổn,vi
+positive,hài lòng,vi
+positive,thân thiện,vi
+positive,hòa đồng,vi
+positive,thoải mái,vi
+positive,nhiệt tình,vi
+positive,hỗ trợ,vi
+positive,giúp đỡ,vi
+positive,cởi mở,vi
+positive,minh bạch,vi
+positive,rõ ràng,vi
+positive,đầy đủ,vi
+positive,hợp lý,vi
+positive,cạnh tranh,vi
+positive,hào phóng,vi
+positive,linh hoạt,vi
+positive,chuyên nghiệp,vi
+positive,hiện đại,vi
+positive,sạch sẽ,vi
+positive,rộng rãi,vi
+positive,đáng,vi
+positive,xứng đáng,vi
+positive,phù hợp,vi
+positive,tuyệt vời,vi
+positive,yêu thích,vi
+positive,gắn kết,vi
+positive,phát triển,vi
+positive,cơ hội,vi
+positive,good,en
+positive,great,en
+positive,excellent,en
+positive,friendly,en
+positive,supportive,en
+positive,helpful,en
+positive,transparent,en
+positive,clear,en
+positive,fair,en
+positive,competitive,en
+positive,generous,en
+positive,flexible,en
+positive,professional,en
+positive,modern,en
+positive,plenty,en
+positive,lots of,en
+positive,nice,en
+positive,love,en
+positive,recommend,en
+negative,thấp,vi
+negative,kém,vi
+negative,tệ,vi
+negative,dở,vi
+negative,chậm,vi
+negative,thiếu,vi
+negative,không rõ ràng,vi
+negative,không minh bạch,vi
+negative,mơ hồ,vi
+negative,nhiều ot,vi
+negative,quá tải,vi
+negative,áp lực,vi
+negative,căng,vi
+negative,mệt,vi
+negative,cũ,vi
+negative,lạc hậu,vi
+negative,chật,vi
+negative,ồn,vi
+negative,hạn chế,vi
+negative,bất cập,vi
+negative,cần cải thiện,vi
+negative,nên cải thiện,vi
+negative,cần xem lại,vi
+negative,chưa tốt,vi
+negative,không hài lòng,vi
+negative,thất vọng,vi
+negative,không tương xứng,vi
+negative,không cạnh tranh,vi
+negative,quan liêu,vi
+negative,thiên vị,vi
+negative,low,en
+negative,poor,en
+negative,bad,en
+negative,slow,en
+negative,lack,en
+negative,lacks,en
+negative,unclear,en
+negative,vague,en
+negative,heavy,en
+negative,intense,en
+negative,stressful,en
+negative,outdated,en
+negative,crowded,en
+negative,noisy,en
+negative,limited,en
+negative,should be improved,en
+negative,needs improvement,en
+negative,not competitive,en
+negative,disappointing,en
+negative,unfair,en
+negative,bureaucratic,en
+positive,hấp dẫn,vi
+positive,hiệu quả,vi
+positive,công bằng,vi
+positive,chu đáo,vi
+positive,tận tình,vi
+positive,nhanh chóng,vi
+positive,dư dả,vi
+positive,exceptional,en
+positive,properly,en
+positive,safe,en
+positive,genuine,en
+positive,best,en
+positive,strong,en
+negative,nặng,vi
+negative,trễ,vi
+negative,bất công,vi
+negative,mất thời gian,vi
+negative,khó khăn,vi
+negative,weak,en
+negative,weak point,en
+negative,lags,en
+negative,brief,en
+negative,long,en

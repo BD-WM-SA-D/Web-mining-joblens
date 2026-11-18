@@ -2,6 +2,7 @@
 
     uv run python -m ie.weak_labels                      # sinh data/weak/wm2_weak_v1.bio.jsonl
     uv run python -m ie.weak_labels --eval-only          # chỉ đo độ chính xác nhãn yếu trên dev
+    uv run python -m ie.weak_labels --version v2         # bản v2: thêm luật theo guideline 0.4 (ie/weak_rules.py)
 
 - Nguồn tag: VietJobs `technical_skills`, TopCV `skill_tags` (bỏ tag kỹ năng mềm – lấy từ cột `soft_skills` của VietJobs).
 - **Không lấy câu của tin thuộc dev (skill_batch1) hay test (skill_test1)** – loại theo job_uid trong manifest.
@@ -23,14 +24,15 @@ from annotation.export_bio import TOKEN_RE
 from annotation.preannotate_dict import SKIP_ALIASES, load_aliases
 from annotation.sample_skill_batch import SECTIONS, mask_pii, split_sentences
 from ie.baseline_dict import build_index, tag
+from ie.weak_rules import EXTRA_FORMS, refine
 
 ROOT = Path(__file__).resolve().parents[1]
 VIETJOBS = ROOT / "data" / "vietjobs" / "it_v1.parquet"
 TOPCV = ROOT / "data" / "crawl" / "topcv" / "topcv_v1.parquet"
 MANIFESTS = [ROOT / "data" / "annotation" / f"{b}.manifest.json" for b in ("skill_batch1", "skill_test1")]
 DEV_BIO = ROOT / "data" / "annotation" / "skill_batch1.bio.jsonl"
-OUT = ROOT / "data" / "weak" / "wm2_weak_v1.bio.jsonl"
-VERSION = "weak-tags+dict-v1"
+WEAK_DIR = ROOT / "data" / "weak"
+VERSIONS = {"v1": "weak-tags+dict-v1", "v2": "weak-tags+dict+rules04-v2"}
 
 
 def _list(v) -> list[str]:
@@ -55,7 +57,10 @@ def excluded_uids(paths: list[Path] = MANIFESTS) -> set[str]:
     return uids
 
 
-def label_tokens(tokens: list[str], forms: list[str]) -> list[str]:
+def label_tokens(tokens: list[str], forms: list[str], version: str = "v1") -> list[str]:
+    if version == "v2":
+        index, max_len = build_index(forms + EXTRA_FORMS)
+        return refine(tokens, tag(tokens, index, max_len))
     index, max_len = build_index(forms)
     return tag(tokens, index, max_len)
 
@@ -90,14 +95,16 @@ def soft_vocab() -> set[str]:
     return {s.lower() for v in vj["soft_skills"] for s in _list(v)}
 
 
-def eval_on_dev(dict_forms: list[str], tags_by_uid: dict[str, list[str]]) -> dict[str, dict[str, float]]:
+def eval_on_dev(
+    dict_forms: list[str], tags_by_uid: dict[str, list[str]], version: str = "v1"
+) -> dict[str, dict[str, float]]:
     rows = [json.loads(x) for x in DEV_BIO.read_text(encoding="utf-8").splitlines() if x]
     gold = [r["tags"] for r in rows]
     kw = {"mode": "strict", "scheme": IOB2}
     variants = {
-        "dict": lambda r: label_tokens(r["tokens"], dict_forms),
-        "tags": lambda r: label_tokens(r["tokens"], tags_by_uid.get(r["job_uid"], []) or ["\x00"]),
-        "tags+dict": lambda r: label_tokens(r["tokens"], dict_forms + tags_by_uid.get(r["job_uid"], [])),
+        "dict": lambda r: label_tokens(r["tokens"], dict_forms, version),
+        "tags": lambda r: label_tokens(r["tokens"], tags_by_uid.get(r["job_uid"], []) or ["\x00"], version),
+        "tags+dict": lambda r: label_tokens(r["tokens"], dict_forms + tags_by_uid.get(r["job_uid"], []), version),
     }
     res = {}
     for name, fn in variants.items():
@@ -113,16 +120,18 @@ def eval_on_dev(dict_forms: list[str], tags_by_uid: dict[str, list[str]]) -> dic
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--eval-only", action="store_true")
-    ap.add_argument("--out", type=Path, default=OUT)
+    ap.add_argument("--version", choices=sorted(VERSIONS), default="v1")
+    ap.add_argument("--out", type=Path)
     args = ap.parse_args()
+    out = args.out or WEAK_DIR / f"wm2_weak_{args.version}.bio.jsonl"
 
     soft = soft_vocab()
     dict_forms = load_aliases()
     posts = postings(soft)
     tags_by_uid = {p["job_uid"]: p["tags"] for p in posts}
 
-    print(f"Nhãn yếu trên dev {DEV_BIO.name} (so với nhãn tay, seqeval strict):")
-    for name, m in eval_on_dev(dict_forms, tags_by_uid).items():
+    print(f"Nhãn yếu {args.version} trên dev {DEV_BIO.name} (so với nhãn tay, seqeval strict):")
+    for name, m in eval_on_dev(dict_forms, tags_by_uid, args.version).items():
         print(f"  {name:10s} P={m['precision']:.3f} R={m['recall']:.3f} F1={m['f1']:.3f}")
     if args.eval_only:
         return
@@ -130,18 +139,20 @@ def main() -> None:
     held_out = excluded_uids()
     n_sent = n_pos = n_span = 0
     used = {"vietjobs": 0, "topcv": 0}
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    with args.out.open("w", encoding="utf-8") as f:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", encoding="utf-8") as f:
         for p in posts:
             if p["job_uid"] in held_out:
                 continue
             used[p["source"]] += 1
-            forms = dict_forms + p["tags"]
+            forms = dict_forms + p["tags"] + (EXTRA_FORMS if args.version == "v2" else [])
             index, max_len = build_index(forms)
             for col, sec in SECTIONS.items():
                 for i, sent in enumerate(split_sentences(p["texts"][col])):
                     tokens = TOKEN_RE.findall(mask_pii(sent))
                     tags = tag(tokens, index, max_len)
+                    if args.version == "v2":
+                        tags = refine(tokens, tags)
                     k = tags.count("B-SKILL")
                     n_sent += 1
                     n_pos += k > 0
@@ -149,8 +160,8 @@ def main() -> None:
                     rec = {"id": f"{p['job_uid'][:12]}-{sec}{i:02d}", "job_uid": p["job_uid"], "source": p["source"]}
                     f.write(json.dumps({**rec, "tokens": tokens, "tags": tags}, ensure_ascii=False) + "\n")
     print(
-        f"{VERSION}: {used} tin (đã loại {len(held_out)} tin dev/test) → {n_sent} câu, "
-        f"{n_pos} câu có kỹ năng, {n_span} span → {args.out}"
+        f"{VERSIONS[args.version]}: {used} tin (đã loại {len(held_out)} tin dev/test) → {n_sent} câu, "
+        f"{n_pos} câu có kỹ năng, {n_span} span → {out}"
     )
 
 

@@ -1,0 +1,31 @@
+<!-- Cấu hình Label Studio cho WM1 (gán cặp tin trùng / không trùng). Hướng dẫn: annotation/guideline_dedup.md
+     KHÔNG hiện trường `stratum`: người gán không được biết cặp đến từ tầng nào (tránh đoán theo tầng). -->
+<View>
+  <Header value="Hai tin này có phải CÙNG MỘT TIN TUYỂN DỤNG không? (xem guideline_dedup.md)"/>
+
+  <View style="display: flex; gap: 1em">
+    <View style="flex: 1; padding: 0.5em; border: 1px solid #ddd; border-radius: 6px">
+      <Header value="Tin A" size="4"/>
+      <Text name="src_a" value="Nguồn: $source_a"/>
+      <Text name="company_a" value="Công ty: $company_a"/>
+      <Text name="title_a" value="$title_a"/>
+      <Text name="text_a" value="$text_a"/>
+    </View>
+    <View style="flex: 1; padding: 0.5em; border: 1px solid #ddd; border-radius: 6px">
+      <Header value="Tin B" size="4"/>
+      <Text name="src_b" value="Nguồn: $source_b"/>
+      <Text name="company_b" value="Công ty: $company_b"/>
+      <Text name="title_b" value="$title_b"/>
+      <Text name="text_b" value="$text_b"/>
+    </View>
+  </View>
+
+  <Choices name="dup" toName="text_a" choice="single" required="true" showInline="true">
+    <Choice value="trùng" hotkey="1"/>
+    <Choice value="không trùng" hotkey="2"/>
+  </Choices>
+  <Choices name="flag" toName="text_a" choice="single" showInline="true">
+    <Choice value="khó / cần bàn"/>
+  </Choices>
+  <TextArea name="comment" toName="text_a" placeholder="Ghi chú (không bắt buộc)" rows="1"/>
+</View>

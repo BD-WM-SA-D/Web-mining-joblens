@@ -1,4 +1,4 @@
-# Hướng dẫn gán nhãn kỹ năng (WM2) – bản 0.3
+# Hướng dẫn gán nhãn kỹ năng (WM2) – bản 0.4
 
 Mục đích: tạo tập vàng (người gán) để đánh giá mô hình trích kỹ năng. Mỗi câu lấy từ mô tả hoặc yêu cầu của một tin tuyển dụng IT. Người gán bôi đen **từng kỹ năng cứng** trong câu, gán nhãn `SKILL`. Sau đó script đổi sang nhãn BIO (`B-SKILL`, `I-SKILL`, `O`) để tính F1 bằng seqeval (strict).
 
@@ -18,6 +18,8 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 | Phương pháp, quy trình kỹ thuật | Agile, Scrum, CI/CD, TDD, kiểm thử tự động |
 | Khái niệm, kiến thức kỹ thuật | OOP, lập trình hướng đối tượng, microservices, RESTful API, cấu trúc dữ liệu và giải thuật, machine learning, TCP/IP |
 | Nghiệp vụ kỹ thuật cụ thể | phân tích nghiệp vụ, viết test case, thiết kế UI/UX, ETL |
+| Sản phẩm thiết kế trung gian (từ 0.4) | wireframe, prototype, mockup, user flow, storyboard, sitemap |
+| Nghiệp vụ ngành (từ 0.4) | game mechanics, core loop, cân bằng game, eKYC, AML, Goods Receipt |
 
 ## 2. Không gán
 
@@ -45,7 +47,7 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 6. **Viết tắt mơ hồ**: "AI" trong tin thiết kế đồ họa là Adobe Illustrator, trong tin dữ liệu là trí tuệ nhân tạo. Cả hai đều gán `SKILL`; người chuẩn hóa sẽ xử lý sau.
 7. **Không bỏ dấu câu vào span**: "Docker," → `Docker`.
 8. **Tiếng Việt và tiếng Anh như nhau**: "kiểm thử tự động" và "automation testing" đều gán.
-9. **Tên sản phẩm, thiết bị kỹ thuật cụ thể** mà người làm phải vận hành thì gán: `Veeam Backup`, `HPE StoreOnce`, `SAN`. Tên hãng đứng một mình ("server HPE/DELL") thì không gán.
+9. **Phần mềm, nền tảng cụ thể** mà người làm phải vận hành thì gán: `Veeam Backup`, `Openstack`. **Thiết bị phần cứng và vật tư hạ tầng** thì không gán (sửa ở 0.4): switch, router, SAN switch, tủ đĩa, tape, tủ Rack, camera, cáp mạng, cáp quang, máy chủ, kể cả tên model như HPE StoreOnce. Công nghệ, giao thức vẫn gán: `PoE`, `DWDM`, `OTN`, `TCP/IP`. Tên hãng đứng một mình ("server HPE/DELL") thì không gán.
 10. **Chữ "..." hoặc "v.v." cuối danh sách** không nằm trong span: "Photoshop, AI, Corel..." → `Photoshop`, `AI`, `Corel`.
 11. **Tên đầy đủ kèm viết tắt trong ngoặc** thì gán hai span, không lấy dấu ngoặc: "trải nghiệm người dùng (UX)" → `trải nghiệm người dùng`, `UX`; "software development life cycle (SDLC)" → hai span.
 12. **Phiên bản đi sau tên** thì bỏ: "Javascript ES5/ES6+" → `Javascript`; "Spring Boot 3.x", "Angular 2+" → `Spring Boot`, `Angular`. Giữ số khi số là phần phân biệt tên quen dùng: `HTML5`, `CSS3`, `HTTP/1.1`, `HTTP/2`.
@@ -117,15 +119,59 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 
 **Chỉ số và phương pháp:** chỉ số (CTR, KPI, ROI, ROAS, CPI, conversion rate, "hệ thống chỉ số đánh giá") → không gán. Phương pháp, kỹ thuật hay công cụ đo → gán: `OKR`, `A/B Testing`, `Uplift`, `coverage code`, `Google Analytics`.
 
-**Tài liệu và sản phẩm đầu ra đứng riêng** (backlog, roadmap, timeline, release plan, project charter, test case, test script, logo, bao bì, key visual, thumbnail, banner, dashboard) → không gán. Ghép với động từ chuyên môn thành tên kỹ năng → gán: `thiết kế thumbnail`, `viết test case`, `Thiết kế các banner`.
+**Tài liệu và sản phẩm đầu ra đứng riêng** (backlog, roadmap, timeline, release plan, project charter, test case, test script, logo, bao bì, key visual, thumbnail, banner, dashboard) → không gán. Ghép với động từ chuyên môn thành tên kỹ năng → gán: `thiết kế thumbnail`, `viết test case`, `Thiết kế các banner`. Tài liệu BA và sản phẩm thiết kế trung gian theo quy tắc riêng ở bản 0.4 (mục dưới).
 
 **Chức danh và tên kỹ năng:** "bạn là ___ à?" (Team Lead, game designer, Project Manager, BA) → chức danh, không gán. "bạn biết ___ không?" (thiết kế game, sáng tạo nội dung) → kỹ năng, gán.
 
-**Từ quá chung đứng một mình:** "kiểm thử", "lập trình", "thiết kế", "phân tích", "quản lý tiến độ", "lập kế hoạch", "tích hợp hệ thống" → không gán. Có từ làm rõ thì gán: `kiểm thử tự động`, `kiểm tra hồi quy`, `quy trình kiểm thử phần mềm`, `phân tích dữ liệu`, `phân tích hành vi người dùng`, `Phân tích hiệu suất kinh doanh`, `quản lý dự án`, `quản lý rủi ro`.
+**Từ quá chung đứng một mình:** "kiểm thử", "lập trình", "thiết kế", "phân tích", "quản lý tiến độ", "lập kế hoạch", "tích hợp hệ thống" → không gán. Có từ làm rõ thì gán: `kiểm thử tự động`, `kiểm tra hồi quy`, `kiểm thử phần mềm`, `phân tích dữ liệu`, `phân tích hành vi người dùng`, `Phân tích hiệu suất kinh doanh`, `quản lý dự án`, `quản lý rủi ro`.
 
 **Công nghệ cụ thể nằm trong danh sách lĩnh vực** vẫn gán: "lĩnh vực phần mềm ứng dụng, PKI, Ngân hàng" → `PKI`; "thanh toán, bảo hiểm, eKYC" → `eKYC`. Tên hãng đứng một mình thì không ("Meta, TikTok"); tên nền tảng quảng cáo thì gán (`Google Ads`, `Applovin`).
 
 **Quy định chung, nội quy** ("quy trình an toàn lao động") → không gán.
+
+### Quy tắc chốt sau đo κ lần 1 trên tập test (bản 0.4)
+
+κ lần 1 (96 câu double của `skill_test1`, guideline 0.3) thấp hơn mục tiêu. Câu lệch dồn vào các nhóm dưới đây; mỗi nhóm chốt một quy tắc.
+
+**1. Tài liệu BA → không gán**, kể cả có "viết", "xây dựng", "đặc tả" đi kèm: BRD, SRS, URD, functional specification, use case, user story, acceptance criteria, tài liệu đặc tả, tài liệu thiết kế / GDD, test plan, tài liệu kỹ thuật, tài liệu hướng dẫn, SOP, datasheet. Công việc phân tích thì vẫn gán: `phân tích yêu cầu`, `Phân tích yêu cầu nghiệp vụ`, `phân tích nghiệp vụ`.
+
+| Câu | Span SKILL |
+|---|---|
+| Thành thạo viết User Story / Use Case. | (không có) |
+| Có kinh nghiệm viết tài liệu BRD, SRS, wireframe. | `wireframe` |
+| Viết functional specification, screen specification, data mapping. | `data mapping` |
+
+**2. Sản phẩm thiết kế trung gian → gán**, kể cả đứng riêng: wireframe, prototype, mockup, user flow, storyboard, sitemap, process flow. Đầu ra cuối cùng (logo, banner, dashboard, test case) vẫn theo quy tắc "tài liệu và sản phẩm đầu ra" ở trên.
+
+| Câu | Span SKILL |
+|---|---|
+| Triển khai Wireframe, Prototype, UI để minh họa ý tưởng. | `Wireframe`, `Prototype` |
+| Xây dựng user flow, wireframe, prototype và mockup. | `user flow`, `wireframe`, `prototype`, `mockup` |
+
+**3. Cloud, AI đứng riêng → gán.** Có liệt kê cụ thể trong ngoặc hoặc sau dấu ":" thì chỉ gán tên cụ thể (quy tắc "tên trước ngoặc"). `AI tools`, `AI Agents` gán; cụm mà AI chỉ là bổ ngữ cho việc khác (`AI adoption`, "giải pháp AI" của công ty đem bán) thì không.
+
+| Câu | Span SKILL |
+|---|---|
+| Biết SQL, server/cloud. | `SQL`, `cloud` |
+| Kinh nghiệm với Cloud (AWS/Azure/GCP). | `AWS`, `Azure`, `GCP` |
+
+**4. Bảo mật: chỉ gán khi cụ thể** – có phạm vi rõ hoặc tên kỹ thuật: `network security`, `bảo mật web`, `Bảo mật Dữ liệu`, `Tấn công xâm nhập` / pentest, `DDOS`, `Top 10 OWASP`, `SAST`, `nghiên cứu lỗ hổng bảo mật`. Không gán khi chung chung: bảo mật, security, an toàn thông tin, ATTT, an ninh mạng, bảo mật hệ thống, bảo mật thông tin.
+
+**5. "Quản lý + X": chỉ gán loại quản lý là nghiệp vụ chính thức có thật** – có tên trong khung chuẩn hay giáo trình (PMBOK, ITIL, ISTQB, SCM): `quản lý dự án`, `quản lý rủi ro`, `stakeholder management`, `quản lý thay đổi`, `quản lý cấu hình`, `incident management`, `Quản lý lỗi` (defect management), `test management`, `Inventory Management`. Không gán việc quản lý thường ngày: quản lý tài khoản, quản lý user, phân quyền, manage test cases, quản lý tài sản thiết bị, quản lý tiến độ, quản lý hệ thống.
+
+**6. Nghiệp vụ ngành → gán** khi là khái niệm hay quy trình nghiệp vụ có tên: game (`game mechanics`, `core loop`, `meta progression`, `cân bằng game`, level design), fintech (`eKYC`, `AML`), ERP/SAP (`Goods Receipt`, `Purchase Order`, `Invoice Verification`, `physical inventory`, `SAP Transport`). Tên lĩnh vực chung vẫn không gán (ngân hàng, game, fintech, y tế). Phân hệ SAP dùng làm tên đội ("FI, MM, SD teams") không gán.
+
+**7. Thiết bị hạ tầng → không gán** (quy tắc span 9).
+
+**8. Động từ chung + việc → không gán**: viết phần mềm, bảo trì phần mềm, xử lý sự cố, giám sát hệ thống, bảo trì phần cứng, kiểm soát chi phí, mô tả quy trình, quản trị/vận hành hệ thống, tối ưu hiệu năng (không đối tượng). Nhóm "… hệ thống" không gán; ngoại lệ là tên môn chuyên môn: `thiết kế hệ thống`, `phân tích thiết kế hệ thống`, `system design`.
+
+**9. Từ chung đứng riêng → không gán**: test, testing, kiểm thử, cơ sở dữ liệu, database, API, server, storage, network, mạng máy tính, tự động hóa, automation, debug. `Backend`, `Frontend`, `Database` chỉ gán khi là mảng kiến thức ("hiểu biết về Backend, Frontend, Database"); là thứ được làm ra ("các hệ thống backend", "dịch vụ backend") thì không. Có từ làm rõ thì gán: `REST API`, `tối ưu database`, `kiểm thử end-to-end`, `sao lưu dữ liệu`, `Phục hồi dữ liệu`.
+
+**10. Ranh giới hay lệch:**
+- Chữ "quy trình", "kiến thức", "kỹ thuật" đứng trước: bỏ nếu phần sau tự đủ nghĩa (`kiểm thử phần mềm`), giữ nếu bỏ đi thì quá chung (`quy trình phát triển phần mềm`).
+- Lấy đủ danh từ chính của tên: `multi-agent systems`, không phải `multi-agent`; `thiết kế UI/UX` gán cả cụm khi viết liền.
+- Không kéo span sang tên tài liệu đi sau: "solution architecture diagrams" → `solution architecture`.
+- Câu tên tài liệu có động từ chuyên môn đi liền vẫn theo quy tắc 15 (`viết test case`, `Tạo kịch bản kiểm thử`).
 
 ## 6. Quy trình
 
@@ -142,6 +188,7 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
    - Người thứ hai (đo κ): lọc cột `double = true`, gán trên một tài khoản khác, không xem nhãn của người kia.
 3. **Gán thử 100 câu** đầu, xem lại guideline, rồi gán tiếp.
 4. **Đo κ:** các câu có `double = true` (khoảng 10%) do người thứ hai gán độc lập. Tính Cohen's κ trên nhãn BIO mức token. Mục tiêu κ ≥ 0,7; thấp hơn thì bàn lại các câu lệch và sửa guideline.
+   - Để người thứ hai không thấy nhãn người thứ nhất, các câu double được chép sang **project Label Studio riêng** không có nhãn sẵn (mỗi task giữ `src_task` = id task gốc để ghép khi tính κ). Tập test `skill_test1`: project "WM2 - TEST - double (người 2)".
 5. Export và đổi sang BIO (cần Personal Access Token của Label Studio trong `data/.ls_token`):
    ```
    uv run python -m annotation.export_bio --project <id> --batch skill_batch1
@@ -161,3 +208,4 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 | 0.1 | 2026-10-07 | Bản đầu |
 | 0.2 | 2026-10-11 | Thêm chứng chỉ, sản phẩm đem bán, tên thiết bị; ví dụ từ đợt 1; các bước Label Studio |
 | 0.3 | 2026-10-18 | Chốt sau 300 câu dev: quy tắc span 11–15 (viết tắt trong ngoặc, phiên bản, lược từ, từ bổ nghĩa, giữ/bỏ động từ); mục "Quy tắc chốt khi gán đợt 1" (cụm từ quyết định, tên trước ngoặc, chỉ số, tài liệu đầu ra, chức danh, từ quá chung) |
+| 0.4 | 2026-11-12 | Chốt sau κ lần 1 trên tập test: tài liệu BA không gán; wireframe/prototype/mockup gán; cloud/AI đứng riêng gán; bảo mật chỉ gán khi cụ thể; "quản lý" chỉ gán nghiệp vụ chính thức; nghiệp vụ ngành gán; thiết bị hạ tầng không gán (sửa quy tắc 9); động từ chung + việc, từ chung đứng riêng, ranh giới hay lệch |

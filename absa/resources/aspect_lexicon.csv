@@ -1,0 +1,248 @@
+aspect,term,lang
+culture_fun,anh em,vi
+culture_fun,atmosphere,en
+culture_fun,colleague,en
+culture_fun,colleagues,en
+culture_fun,company trip,en
+culture_fun,coworkers,en
+culture_fun,culture,en
+culture_fun,drama,vi
+culture_fun,du lịch,vi
+culture_fun,du lịch công ty,vi
+culture_fun,friendly,en
+culture_fun,gắn kết,vi
+culture_fun,hoạt động nội bộ,vi
+culture_fun,hòa đồng,vi
+culture_fun,outing,en
+culture_fun,party,en
+culture_fun,team building,vi
+culture_fun,team building,en
+culture_fun,teambuilding,vi
+culture_fun,teammates,en
+culture_fun,thoải mái,vi
+culture_fun,thân thiện,vi
+culture_fun,tiệc,vi
+culture_fun,văn hóa,vi
+culture_fun,year-end party,en
+culture_fun,đồng nghiệp,vi
+management_care,ban lãnh đạo,vi
+management_care,boss,en
+management_care,chăm sóc nhân viên,vi
+management_care,cấp trên,vi
+management_care,giao tiếp nội bộ,vi
+management_care,giao việc,vi
+management_care,giám đốc,vi
+management_care,hr,vi
+management_care,hr team,en
+management_care,leader,vi
+management_care,leadership,en
+management_care,listens,en
+management_care,lãnh đạo,vi
+management_care,lắng nghe,vi
+management_care,management,en
+management_care,manager,en
+management_care,managers,en
+management_care,micro-manage,en
+management_care,minh bạch,vi
+management_care,nhân sự,vi
+management_care,performance review,en
+management_care,process,en
+management_care,processes,en
+management_care,quan tâm nhân viên,vi
+management_care,quy trình,vi
+management_care,quản lý,vi
+management_care,quản lý trực tiếp,vi
+management_care,review criteria,en
+management_care,supervisor,en
+management_care,tiêu chí đánh giá,vi
+management_care,transparent,en
+management_care,trưởng nhóm,vi
+management_care,đánh giá hiệu suất,vi
+office_workspace,building,en
+office_workspace,bàn ghế,vi
+office_workspace,bàn làm việc,vi
+office_workspace,bàn nâng hạ,vi
+office_workspace,chỗ làm việc,vi
+office_workspace,chỗ ngồi,vi
+office_workspace,chỗ ngủ trưa,vi
+office_workspace,chỗ đỗ xe,vi
+office_workspace,csvc,vi
+office_workspace,cơ sở vật chất,vi
+office_workspace,desk,en
+office_workspace,elevator,en
+office_workspace,equipment,en
+office_workspace,facilities,en
+office_workspace,gửi xe,vi
+office_workspace,không gian,vi
+office_workspace,laptop,vi
+office_workspace,macbook,en
+office_workspace,macos,en
+office_workspace,monitor,en
+office_workspace,màn hình,vi
+office_workspace,máy pha cafe,vi
+office_workspace,máy tính,vi
+office_workspace,nhà xe,vi
+office_workspace,office,en
+office_workspace,pantry,vi
+office_workspace,pantry,en
+office_workspace,parking,en
+office_workspace,thang máy,vi
+office_workspace,thiết bị,vi
+office_workspace,trang thiết bị,vi
+office_workspace,văn phòng,vi
+office_workspace,workspace,en
+office_workspace,điều hòa,vi
+salary_benefits,13th month,en
+salary_benefits,annual leave,en
+salary_benefits,benefit,en
+salary_benefits,benefits,en
+salary_benefits,bonus,en
+salary_benefits,bảo hiểm,vi
+salary_benefits,compensation,en
+salary_benefits,cơm trưa,vi
+salary_benefits,esop,en
+salary_benefits,gym,en
+salary_benefits,hot bonus,en
+salary_benefits,hỗ trợ gym,vi
+salary_benefits,hợp đồng,vi
+salary_benefits,insurance,en
+salary_benefits,lương,vi
+salary_benefits,lương ot,vi
+salary_benefits,lương thưởng,vi
+salary_benefits,mức lương,vi
+salary_benefits,nghỉ phép,vi
+salary_benefits,ngày phép,vi
+salary_benefits,package,en
+salary_benefits,paid leave,en
+salary_benefits,pay,en
+salary_benefits,phúc lợi,vi
+salary_benefits,phụ cấp,vi
+salary_benefits,raise,en
+salary_benefits,review lương,vi
+salary_benefits,salary,en
+salary_benefits,thu nhập,vi
+salary_benefits,tháng 13,vi
+salary_benefits,thưởng,vi
+salary_benefits,thưởng ot,vi
+salary_benefits,tiền ot,vi
+salary_benefits,trợ cấp,vi
+salary_benefits,tăng lương,vi
+salary_benefits,đãi ngộ,vi
+training_learning,buổi chia sẻ,vi
+training_learning,career development,en
+training_learning,career path,vi
+training_learning,career path,en
+training_learning,certification,en
+training_learning,chia sẻ kinh nghiệm,vi
+training_learning,chứng chỉ,vi
+training_learning,course,en
+training_learning,courses,en
+training_learning,công nghệ mới,vi
+training_learning,cơ hội học,vi
+training_learning,cơ hội phát triển,vi
+training_learning,development path,en
+training_learning,growth,en
+training_learning,học hỏi,vi
+training_learning,khóa học,vi
+training_learning,kèm cặp,vi
+training_learning,learn,en
+training_learning,learning,en
+training_learning,learning opportunities,en
+training_learning,lộ trình,vi
+training_learning,lộ trình phát triển,vi
+training_learning,mentor,vi
+training_learning,mentoring,en
+training_learning,mở rộng domain,vi
+training_learning,onboarding,en
+training_learning,phát triển bản thân,vi
+training_learning,practical experience,en
+training_learning,promotion,en
+training_learning,talkshow,vi
+training_learning,thăng tiến,vi
+training_learning,training,en
+training_learning,upskill,en
+training_learning,đào tạo,vi
+training_learning,được học,vi
+training_learning,định hướng,vi
+work_life_balance,cày cuốc,vi
+work_life_balance,cân bằng,vi
+work_life_balance,deadline,vi
+work_life_balance,deadline,en
+work_life_balance,deadlines,en
+work_life_balance,flexiable,en
+work_life_balance,flexible,en
+work_life_balance,flexible working,en
+work_life_balance,giờ giấc,vi
+work_life_balance,giờ làm,vi
+work_life_balance,giờ làm việc,vi
+work_life_balance,hybrid,en
+work_life_balance,khối lượng công việc,vi
+work_life_balance,linh hoạt,vi
+work_life_balance,làm thêm giờ,vi
+work_life_balance,làm từ xa,vi
+work_life_balance,nghỉ bù,vi
+work_life_balance,ot,vi
+work_life_balance,overtime,vi
+work_life_balance,overtime,en
+work_life_balance,pressure,en
+work_life_balance,remote,vi
+work_life_balance,remote,en
+work_life_balance,sấp mặt,vi
+work_life_balance,tăng ca,vi
+work_life_balance,wfh,en
+work_life_balance,wlb,vi
+work_life_balance,work from home,vi
+work_life_balance,work from home,en
+work_life_balance,work life balance,vi
+work_life_balance,work life balance,en
+work_life_balance,work-life balance,en
+work_life_balance,working hours,en
+work_life_balance,workload,en
+work_life_balance,áp lực,vi
+culture_fun,môi trường,vi
+culture_fun,môi trường làm việc,vi
+culture_fun,môi trường công ty,vi
+culture_fun,environment,en
+culture_fun,working environment,en
+training_learning,môi trường học hỏi,vi
+training_learning,môi trường rèn luyện,vi
+training_learning,môi trường phát triển,vi
+training_learning,môi trường để học,vi
+training_learning,learning environment,en
+training_learning,rèn luyện,vi
+management_care,sếp,vi
+management_care,sếp trực tiếp,vi
+management_care,scrum master,en
+management_care,project manager,en
+management_care,tech lead,en
+management_care,team lead,en
+management_care,line manager,en
+management_care,ban giám đốc,vi
+management_care,đánh giá năng lực,vi
+management_care,kpi,en
+management_care,code review,en
+management_care,review code,en
+management_care,pull request,en
+management_care,giao tiếp,vi
+management_care,phân công,vi
+management_care,onboarding process,en
+culture_fun,teamwork,en
+culture_fun,đội ngũ,vi
+culture_fun,mọi người,vi
+culture_fun,tôn trọng,vi
+culture_fun,respect,en
+culture_fun,respectful,en
+culture_fun,bonding,en
+culture_fun,đối xử,vi
+culture_fun,giúp đỡ nhau,vi
+culture_fun,hỗ trợ nhau,vi
+culture_fun,pair programming,en
+culture_fun,working style,en
+culture_fun,văn hoá,vi
+culture_fun,teammate,en
+culture_fun,team member,en
+training_learning,tiến bộ,vi
+training_learning,học được,vi
+training_learning,kinh nghiệm,vi
+training_learning,training process,en
+training_learning,learning process,en

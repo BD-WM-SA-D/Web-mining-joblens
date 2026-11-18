@@ -2,6 +2,7 @@
 
     uv run python -m crawler.topcv.run --max-jobs 20                 # thử nhỏ
     uv run python -m crawler.topcv.run --max-jobs 500 --max-sitemaps 5 --since 2026-10-01
+    uv run python -m crawler.topcv.run --max-jobs 400 --max-sitemaps 40 --skip-sitemaps 40   # ngày kế tiếp
 
 Kết quả: data/crawl/topcv/<ngày>/jobs.jsonl, parse_errors.jsonl; HTML đã che PII ở data/raw-html/topcv/<ngày>/.
 """
@@ -21,6 +22,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-jobs", type=int, default=20)
     ap.add_argument("--max-sitemaps", type=int, default=1)
+    ap.add_argument("--skip-sitemaps", type=int, default=0, help="bỏ qua N sitemap con đầu (crawl tiếp ngày sau)")
     ap.add_argument("--since", help="chỉ lấy URL có lastmod >= giá trị này (ISO, ví dụ 2026-10-01)")
     ap.add_argument("--all-categories", action="store_true", help="lấy cả tin không phải IT")
     ap.add_argument("--no-slug-filter", action="store_true", help="không lọc thô theo slug (tốn request hơn)")
@@ -33,6 +35,7 @@ def main() -> None:
         TopcvSpider,
         max_jobs=args.max_jobs,
         max_sitemaps=args.max_sitemaps,
+        skip_sitemaps=args.skip_sitemaps,
         since=args.since,
         it_only=not args.all_categories,
         slug_filter=not args.no_slug_filter,

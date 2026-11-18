@@ -1,0 +1,33 @@
+{
+  "run_id": "2026-11-18-wm3-luật phần review-eval-s1",
+  "task": "WM3",
+  "rq": "WM3 có nói đúng về công ty theo đánh giá của người khác không",
+  "method": "luật phần review",
+  "baseline_of": null,
+  "data": {
+    "eval_set": "itviec_stars_blurred",
+    "split": "eval",
+    "snapshot": null,
+    "ids_sha256": "01e08b6176969e5e6fc21eb17f4b68d15d475a49f7537b9192c4ba5e3b8bf2d7",
+    "n_items": 278,
+    "n_gold": 278
+  },
+  "train": null,
+  "seed": 1,
+  "metrics": {
+    "spearman_stars": 0.154
+  },
+  "ci95": {
+    "spearman_stars": [
+      0.0329,
+      0.2576
+    ]
+  },
+  "runtime": {},
+  "repro": {
+    "command": "uv run python -m absa.company_eval",
+    "git_commit": "217f81c-dirty",
+    "models_yaml": null
+  },
+  "created_at": "2026-11-18T16:44:21+07:00"
+}

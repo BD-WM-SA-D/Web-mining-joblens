@@ -1,0 +1,33 @@
+{
+  "run_id": "2026-11-18-wm2-phobert+dict-weak-v1-test-s3",
+  "task": "WM2",
+  "rq": "RQ3",
+  "method": "phobert+dict-weak-v1",
+  "baseline_of": "dict-alias-v0",
+  "data": {
+    "eval_set": "skill_test1",
+    "split": "test",
+    "snapshot": null,
+    "ids_sha256": "f9e7f2f91366dec1e518a1565954a3cb966afcbaa8e5125df2897da51340812f",
+    "n_items": 1000,
+    "n_gold": null
+  },
+  "train": {
+    "data": "wm2_weak_v1",
+    "model": "data\\models\\wm2-phobert-s3"
+  },
+  "seed": 3,
+  "metrics": {
+    "precision": 0.696,
+    "recall": 0.4743,
+    "f1": 0.5642
+  },
+  "ci95": {},
+  "runtime": {},
+  "repro": {
+    "command": "C:\\Users\\hoang le\\joblens\\repos\\Web-mining-joblens\\ie\\phobert.py eval --model data/models/wm2-phobert-s3 --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed 3",
+    "git_commit": "217f81c-dirty",
+    "models_yaml": null
+  },
+  "created_at": "2026-11-18T16:33:14+07:00"
+}

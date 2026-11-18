@@ -100,3 +100,24 @@ def _validator(name: str) -> Draft202012Validator:
 def schema_errors(message: dict, schema: str = "job_posting.v1") -> list[str]:
     """Danh sách lỗi so với schema (rỗng = hợp lệ)."""
     return [f"{'/'.join(map(str, e.path))}: {e.message}" for e in _validator(schema).iter_errors(message)]
+
+
+def review_message(
+    source: str,
+    source_review_id: str,
+    company_id: str,
+    url: str,
+    payload: dict,
+    crawl_ts: str | None = None,
+) -> dict:
+    """Đóng gói một review công ty theo review.v1 (schema ở repo joblens). Payload KHÔNG chứa tên người review."""
+    return {
+        "schema_version": "review.v1",
+        "source": source,
+        "source_review_id": source_review_id,
+        "company_id": company_id,
+        "url": url,
+        "crawl_ts": crawl_ts or utc_now(),
+        "content_hash": content_hash(payload),
+        "payload": payload,
+    }

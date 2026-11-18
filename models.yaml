@@ -10,4 +10,44 @@
 #   metrics: {entity_f1_strict: <...>}
 #   trained_by: <Họ tên>
 #   date: <yyyy-mm-dd>
-models: []
+models:
+  - name: skill-extractor
+    version: 0.1.0
+    image: <chưa đóng – hợp đồng chạy theo ADR 0001 D3>
+    s3_path: <chưa đẩy – model nằm ở data/models/wm2-phobert-v3-s{1,2,3} (không commit)>
+    train_snapshot: >
+      nhãn yếu wm2_weak_v3 (self-training, đồng thuận 3 seed) sinh từ tag "Kỹ năng cần có" của TopCV
+      + từ điển ie/resources/skill_alias.csv; cơ sở PhoBERT-base-v2, 3 epoch, lr 3e-5, max_len 256
+    metrics: {entity_f1_strict: 0.617, precision: 0.715, recall: 0.543}
+    eval_set: skill_test1 (1.000 câu TEST đã đóng băng, sha256 9f7a2a0c…fbefba0362)
+    trained_by: <Họ tên>
+    date: 2026-11-18
+    note: >
+      Ba seed cho 0.616 / 0.618 / 0.617 (lệch 0.001). Baseline từ điển dict-alias-v0 được 0.442;
+      ΔF1 +0.174…+0.176, bootstrap ghép cặp theo tin CI95 trong [+0.128; +0.224], p(Δ≤0) = 0.000.
+      Bản v1 trước đây được 0.562 – thay bằng v3 từ 2026-11-18, mức tăng nằm gần hết ở recall
+      (0.469 → 0.543). Ghép thêm từ điển vào đầu ra không giúp nữa (0.615). Ghi silver.job_skills.
+      Chuẩn hóa ESCO CHƯA làm: cột esco_uri trong skill_alias.csv còn rỗng, nên canonical_id hiện là
+      id của từ điển 200 kỹ năng tự soạn, không phải ESCO.
+  - name: absa-aspect-polarity
+    version: 0.1.0
+    image: <chưa đóng – hợp đồng chạy theo ADR 0001 D3>
+    s3_path: <không có file model – train lại trong ~3 giây bằng absa/supervised.py>
+    train_snapshot: >
+      200 câu dev gán tay (data/annotation/absa_trial.absa.jsonl + absa_dev2.absa.jsonl, 2026-11-17);
+      từ điển absa/resources/aspect_lexicon.csv + sentiment_lexicon.csv phiên bản dict-v3
+    metrics: {aspect_f1_micro: 0.753, sentiment_f1_macro: 0.590}
+    eval_set: absa_test1 (348 câu TEST đã đóng băng, sha256 ee7f4832…)
+    trained_by: <Họ tên>
+    date: 2026-11-17
+    note: >
+      Khía cạnh lấy từ từ điển (match_aspects), chỉ cực tính là học: hồi quy logistic 3 lớp trên
+      11 tín hiệu của từ điển cộng TF-IDF từ 1-2 gram. Ghi silver.review_aspects.
+      Không dùng nhãn yếu để train – pool ngoài review của TEST chỉ còn 1 cặp negative.
+      CẢNH BÁO khi đọc số: một luật một dòng theo trường `section` của ITviec được 0.583 trên cùng
+      tập TEST, chênh với mô hình này không có ý nghĩa (p = 0.264). Phần do học mà ra là không đáng
+      kể; xem mục "Kiểm lại" trong experiments/results.md trước khi trích số này.
+      BỔ SUNG 2026-11-18: dưới đích là điểm sao ITviec (không do người gán tạo ra), mô hình này
+      HƠN luật section có ý nghĩa ở mức review (Spearman 0.329 so với 0.239, Δρ = +0.090,
+      CI95 [+0.022; +0.161], p = 0.005), và từ điển thì không mang tín hiệu mức công ty
+      (ρ = −0.052, CI chứa 0) trong khi mô hình này có (0.196). Xem absa/company_eval.py.
