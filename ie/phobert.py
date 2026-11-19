@@ -190,6 +190,20 @@ def evaluate(model, tokenizer, rows, max_len, device) -> dict[str, dict[str, flo
     }, pred
 
 
+def token_loss(logits, labels, o_weight: float = 1.0):
+    """Cross-entropy theo token; token nhãn O nhân `o_weight` (< 1: bớt phạt vì nhãn yếu bỏ sót). Chia cho số token
+    có nhãn, nên o_weight = 1 trùng với loss mặc định của transformers."""
+    import torch.nn.functional as F
+
+    flat = labels.view(-1)
+    ce = F.cross_entropy(logits.view(-1, logits.size(-1)).float(), flat, ignore_index=-100, reduction="none")
+    valid = flat != -100
+    w = valid.float()
+    if o_weight != 1.0:
+        w = w * ((flat == L2I["O"]).float() * (o_weight - 1.0) + 1.0)
+    return (ce * w).sum() / valid.sum().clamp(min=1)
+
+
 def train(args) -> None:
     import torch
     from transformers import AutoModelForTokenClassification, AutoTokenizer, get_linear_schedule_with_warmup
@@ -213,9 +227,9 @@ def train(args) -> None:
     oracle = [from_units(to_units(r["tags"], r["units"]), r["units"], len(r["tokens"])) for r in dev]
     print(f"oracle tách từ trên dev (trần do ranh giới từ): F1={f1_score(gold_dev, oracle, **SEQ):.3f}")
 
-    tok = AutoTokenizer.from_pretrained(BASE)
+    tok = AutoTokenizer.from_pretrained(args.base)
     model = AutoModelForTokenClassification.from_pretrained(
-        BASE, num_labels=len(LABELS), id2label=dict(enumerate(LABELS)), label2id=L2I
+        args.base, num_labels=len(LABELS), id2label=dict(enumerate(LABELS)), label2id=L2I
     ).to(device)
     enc = [encode(tok, r["units"], to_units(r["tags"], r["units"]), args.max_len) for r in train_rows]
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
@@ -223,7 +237,8 @@ def train(args) -> None:
     sched = get_linear_schedule_with_warmup(opt, int(0.1 * steps), steps)
     scaler = torch.amp.GradScaler(enabled=device.type == "cuda")
 
-    out_dir = MODELS / (f"wm2-phobert-s{args.seed}" if args.weak == "v1" else f"wm2-phobert-{args.weak}-s{args.seed}")
+    name = "wm2-phobert" + ("" if args.weak == "v1" else f"-{args.weak}") + (f"-{args.tag}" if args.tag else "")
+    out_dir = MODELS / f"{name}-s{args.seed}"
     best, best_res = -1.0, None
     for ep in range(args.epochs):
         model.train()
@@ -241,7 +256,8 @@ def train(args) -> None:
                 lab[i, : len(y)] = torch.tensor(y)
                 mask[i, : len(x)] = 1
             with torch.autocast(device.type, dtype=torch.float16, enabled=device.type == "cuda"):
-                loss = model(input_ids=ids.to(device), attention_mask=mask.to(device), labels=lab.to(device)).loss
+                logits = model(input_ids=ids.to(device), attention_mask=mask.to(device)).logits
+                loss = token_loss(logits, lab.to(device), args.o_weight)
             opt.zero_grad()
             scaler.scale(loss).backward()
             scaler.unscale_(opt)
@@ -260,21 +276,37 @@ def train(args) -> None:
 
     minutes = round((time.time() - t0) / 60, 1)
     print(f"tốt nhất dev F1={best:.3f} → {out_dir} ({minutes} phút)")
-    params = {"lr": args.lr, "epochs": args.epochs, "bs": args.bs, "neg_ratio": args.neg_ratio, "max_len": args.max_len}
+    params = {
+        "lr": args.lr,
+        "epochs": args.epochs,
+        "bs": args.bs,
+        "neg_ratio": args.neg_ratio,
+        "max_len": args.max_len,
+        "o_weight": args.o_weight,
+    }
     for method, m in best_res.items():
         save_run(
             task="WM2",
             rq="RQ3",
-            method=f"{method}-weak-{args.weak}",
+            method=method_name(method, args),
             baseline_of="dict-alias-v0",
             eval_set="skill_batch1",
             split="dev",
             metrics=m,
             ids=[r["id"] for r in dev],
             seed=args.seed,
-            train={"data": f"wm2_weak_{args.weak}", "n_items": len(train_rows), "params": params},
+            train={
+                "data": f"wm2_weak_{args.weak}",
+                "base": str(args.base),
+                "n_items": len(train_rows),
+                "params": params,
+            },
             runtime={"minutes": minutes, "hardware": torch.cuda.get_device_name(0) if device.type == "cuda" else "cpu"},
         )
+
+
+def method_name(method: str, args) -> str:
+    return f"{method}-weak-{args.weak}" + (f"-{args.tag}" if args.tag else "")
 
 
 def eval_cmd(args) -> None:
@@ -295,7 +327,7 @@ def eval_cmd(args) -> None:
             save_run(
                 task="WM2",
                 rq="RQ3",
-                method=f"{method}-weak-{args.weak}",
+                method=method_name(method, args),
                 baseline_of="dict-alias-v0",
                 eval_set=args.eval_set,
                 split=args.split,
@@ -319,6 +351,9 @@ def main() -> None:
     t.add_argument("--bs", type=int, default=16)
     t.add_argument("--neg-ratio", type=float, default=0.3)
     t.add_argument("--max-len", type=int, default=256)
+    t.add_argument("--o-weight", type=float, default=1.0, help="hệ số loss cho token nhãn O (mặc định 1 = như cũ)")
+    t.add_argument("--base", default=BASE, help="mô hình gốc: tên Hugging Face hoặc thư mục (vd bản DAPT)")
+    t.add_argument("--tag", help="hậu tố tên model và tên phương pháp, vd dapt → wm2-phobert-v3-dapt-s1")
     e = sub.add_parser("eval")
     e.add_argument("--weak", default="v1", help="phiên bản nhãn yếu model đã train, để ghi vào run")
     e.add_argument("--model", type=Path, required=True)
@@ -327,6 +362,7 @@ def main() -> None:
     e.add_argument("--eval-set", help="có thì ghi experiments/runs/<run_id>.json, ví dụ skill_batch1")
     e.add_argument("--split", default="dev")
     e.add_argument("--seed", type=int, default=0, help="seed lúc train model, để ghi vào run")
+    e.add_argument("--tag", help="như train --tag, để ghi tên phương pháp")
     args = ap.parse_args()
     train(args) if args.cmd == "train" else eval_cmd(args)
 

@@ -115,6 +115,377 @@ chênh lệch lớn):
 
 Lệnh: `uv run python -m experiments.robustness wm1`, `uv run python -m experiments.robustness wm2`.
 
+## VietJobs cho WM6 và WM2 – đăng ký trước (2026-11-18, ghi TRƯỚC khi chạy)
+
+VietJobs (Pham Dinh et al., LREC 2026) không có tên công ty, nguồn, review nên không dùng được cho WM1, WM3
+hay làm tập test. Hai chỗ nó giúp được là chỗ cần **nhiều văn bản**: kiểm cụm kỹ năng WM6 trên một kho tin
+khác, và cho PhoBERT đọc văn bản tin tuyển dụng trước khi fine-tune WM2. Không chỉnh hệ nào trên TEST.
+
+### A. WM6 – cụm kỹ năng có lặp lại trên VietJobs không
+
+- Dữ liệu: VietJobs `it_v1` (1.906 tin ngành CNTT). Đồ thị đối chiếu: đồ thị crawl đã báo (TopCV `topcv_v2` +
+  ITviec `itviec_v1`, 867 tin).
+- Cách dựng giữ nguyên: từ điển alias trên tiêu đề + mô tả + yêu cầu, `min_df` 5, `min_weight` 3, NPMI ≥ 0,3,
+  Louvain seed 1, resolution 1. **Không** dùng cột `technical_skills` của VietJobs (sinh bằng LLM, khác loại với
+  tag nhà tuyển dụng). Vì đồ thị crawl có dùng tag nhà tuyển dụng, dựng thêm bản crawl **không tag** để so cùng cách.
+- Đo:
+  1. Q so với đồ thị ngẫu nhiên giữ bậc (100 lần) trên đồ thị VietJobs.
+  2. NMI/ARI giữa phân hoạch crawl và phân hoạch VietJobs trên đỉnh chung; mốc xáo nhãn ngẫu nhiên (200 lần);
+     đối chiếu hai mốc đã có trong crawl: chia ngẫu nhiên 0,615, chia theo nguồn 0,476.
+  3. Spearman thứ hạng số tin (df) trên đỉnh chung; số kỹ năng chung trong top-20.
+  4. Bảng cụm VietJobs, đọc định tính.
+- Dự đoán (để đối chiếu, không để chọn): Q VietJobs vượt ngẫu nhiên rõ; NMI crawl–VietJobs khoảng 0,35–0,5, thấp
+  hơn chia theo nguồn vì VietJobs khác thời gian và có nhiều vị trí phần cứng/hỗ trợ; cụm DevOps, Mobile,
+  Frontend lặp lại, cụm BA/ERP khác.
+
+### B. WM2 – tiền huấn luyện thích nghi miền (DAPT) trên VietJobs
+
+- Câu hỏi: cho PhoBERT-base-v2 học tiếp masked LM trên văn bản tin tuyển dụng trước khi fine-tune có làm F1 trích
+  kỹ năng tăng không.
+- Corpus: tiêu đề + mô tả + yêu cầu của 48.092 tin VietJobs, tách dòng/câu, token như lúc fine-tune (TOKEN_RE),
+  tách từ underthesea. Không dùng văn bản crawl TopCV/ITviec (chứa câu của `skill_test1`), không dùng nhãn.
+- Chống rò rỉ: bỏ khỏi corpus mọi câu trùng nguyên văn (sau khi chuẩn hóa khoảng trắng, chữ thường) với một câu
+  của `skill_test1`; báo số câu đã bỏ.
+- Cấu hình cố định: che 15% subword, độ dài tối đa 256, lr 5e-5, warmup 6%, weight decay 0,01, batch hiệu dụng 32,
+  1 epoch, seed 1, fp16. Nếu ước lượng thời gian > 4 giờ trên RTX 3050 Ti thì lấy mẫu ngẫu nhiên (seed 1) bớt câu
+  cho vừa, ghi số câu thật đã dùng.
+- Fine-tune: đúng công thức v3 (nhãn yếu v3, lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, chọn epoch trên dev
+  `skill_batch1`), seed 1–3, **chỉ thay mô hình gốc**.
+- Chấm `skill_test1` **một lần**. Số chính: F1 trung bình 3 seed so với v3 (0,617); ΔF1 giữa DAPT-v3 và v3 cùng
+  seed, bootstrap ghép cặp theo tin (1.000 lần).
+- Quy tắc kết luận: chỉ viết "DAPT tốt hơn" nếu CI95 của ΔF1 nằm hẳn trên 0 ở cả 3 seed; ngược lại viết "không
+  khác biệt" hoặc "kém hơn". Image `skill-extractor` chỉ đổi sang DAPT nếu tốt hơn theo quy tắc này.
+- Dự đoán: tăng nhỏ, +0,005 đến +0,02, chủ yếu ở recall cụm tiếng Việt.
+
+### Kết quả A – WM6 trên VietJobs (2026-11-18, chạy một lần theo đăng ký trên)
+
+**Có cấu trúc cụm.** Đồ thị VietJobs IT: 1.533/1.906 tin có kỹ năng (5,5 kỹ năng/tin), 194 đỉnh; NPMI ≥ 0,3 còn
+193 đỉnh, 1.388 cạnh. Louvain 7 cụm, Q = **0,497** (ngẫu nhiên giữ bậc 0,199 ± 0,009, z = 33,2, 0/100 lần vượt),
+ổn định giữa seed NMI 0,80–0,94.
+
+**Cụm của crawl lặp lại phần lớn trên VietJobs:**
+
+| So với VietJobs | Đỉnh chung | NMI | ARI | mốc xáo (NMI) |
+|---|---|---|---|---|
+| đồ thị crawl đã báo (có tag nhà tuyển dụng) | 160 | **0,595** | 0,442 | 0,073 |
+| đồ thị crawl không tag (cùng cách dựng với VietJobs) | 160 | 0,605 | 0,445 | 0,065 |
+| *mốc trong crawl:* chia ngẫu nhiên hai nửa | 140 | 0,615 | 0,542 | 0,057 |
+| *mốc trong crawl:* TopCV so với ITviec | 134 | 0,476 | 0,399 | 0,056 |
+
+Bỏ tag nhà tuyển dụng gần như không đổi kết quả (crawl có tag so với không tag: NMI 0,816).
+
+| Cụm crawl | Kỹ năng nhiều tin nhất | Rơi vào cụm VietJobs | Tỉ lệ |
+|---|---|---|---|
+| BA / quản lý sản phẩm | API, Agile, Jira, Phân tích yêu cầu, Scrum | BA / quản lý dự án (có cả ERP, CRM, Excel) | 25/35 |
+| Frontend và .NET | JavaScript, TypeScript, ReactJS, C#, Node.js | Web (Git, JavaScript, ReactJS, HTML, PHP) | 21/28 |
+| Backend Java | Java, Git, PostgreSQL, Microservices | Backend / CSDL (Java, MySQL, Oracle, C#) | 21/27 |
+| DevOps / cloud | CI/CD, Docker, AWS, Kubernetes | DevOps / cloud (cùng Python, Linux) | 20/22 |
+| Hệ thống / mạng | Linux, Bash, Firewall, TCP/IP | DevOps / cloud | 14/14 |
+| Mobile | Kotlin, Swift, Flutter, XCode | Web | 7/8 |
+| ML / dữ liệu | Python, Machine Learning, C++, R | AI / phân tích dữ liệu | 8/15 |
+| ERP / BI | ERP, CRM, ETL, Power BI | AI / phân tích dữ liệu | 6/11 |
+
+VietJobs có thêm hai cụm crawl không có: **thiết kế** (Photoshop, Illustrator, Figma, InDesign, Canva) và
+**3D / CAD** (AutoCAD, 3ds Max, SketchUp, Blender). Ngành "CNTT, kỹ thuật số" của VietJobs rộng hơn tập tin
+IT đã crawl.
+
+**Thứ hạng độ phổ biến khác nhiều hơn cụm:** Spearman số tin trên 163 đỉnh chung 0,748; top-20 chung 11/20.
+Crawl nghiêng về cloud/DevOps (Azure, GCP, Kubernetes, Microservices chỉ ở top crawl), VietJobs nghiêng về thiết
+kế và phân tích (Photoshop, Figma, Phân tích dữ liệu, Quản lý dự án chỉ ở top VietJobs). Khớp với bảng nhu cầu kỹ
+năng đã có: ITviec chủ yếu công ty IT nước ngoài.
+
+**Đối chiếu dự đoán:**
+- Q vượt ngẫu nhiên: đúng.
+- NMI dự đoán 0,35–0,5, đo được **0,595**: cao hơn dự đoán, gần bằng mốc chia ngẫu nhiên trong crawl và cao hơn
+  mốc TopCV–ITviec.
+- DevOps, Frontend lặp lại: đúng. Mobile không thành cụm riêng mà gộp vào Web. BA lặp lại; ERP bị kéo sang nhóm
+  dữ liệu.
+
+**Đọc đúng:** nhóm kỹ năng lớn (web, backend, DevOps, BA, dữ liệu) **không chỉ là nếp riêng của TopCV và
+ITviec**: chúng lặp lại trên một kho tin khác, khác thời gian, lớn gấp đôi. Phần không lặp lại là cụm nhỏ
+(mobile, mạng) và ranh giới ERP/dữ liệu.
+
+**Hạn chế của phép so này:**
+- Từ điển alias dựng một phần từ tag `technical_skills` của VietJobs, nên hai đồ thị dùng chung bộ đỉnh có sẵn.
+  Phép so đo cách các kỹ năng *gom nhóm*, không đo độ phủ kỹ năng.
+- Không so được trực tiếp với mốc "chia ngẫu nhiên hai nửa" (0,615): mỗi nửa crawl chỉ khoảng 430 tin, VietJobs
+  1.533 tin. Đồ thị lớn hơn thì ổn định hơn, nên NMI 0,595 có thể bị đẩy lên một phần vì cỡ dữ liệu.
+- VietJobs có thể chứa tin cùng vị trí với tin crawl (cùng thị trường), không gộp được vì VietJobs không có tên
+  công ty.
+
+Lệnh: `uv run python -m graph.build --snapshots data/vietjobs/it_v1.parquet --no-tags --out data/graph/skill_graph_vietjobs.json`;
+`uv run python -m graph.build --no-tags --out data/graph/skill_graph_dict_notags.json`;
+`uv run python -m graph.analyze cluster --graph data/graph/skill_graph_vietjobs.json --min-npmi 0.3 --n-null 100`;
+`uv run python -m graph.analyze compare --other data/graph/skill_graph_vietjobs.json` (thêm `--graph data/graph/skill_graph_dict_notags.json` cho bản không tag).
+
+### Kiểm tra rò rỉ: câu `skill_test1` có nằm trong dữ liệu train không (2026-11-19)
+
+Làm khi dựng corpus DAPT: so nguyên văn (chữ thường, gộp khoảng trắng) từng câu TEST với dữ liệu khác.
+
+- **Corpus DAPT (VietJobs 567.888 câu):** 397 câu trùng một câu TEST → đã bỏ trước khi train, theo đăng ký.
+- **Nhãn yếu v1/v2/v3 (24.144 câu, dùng để train mọi bản PhoBERT đã báo):** 57 câu trùng, ứng với **30 câu TEST**
+  (29 câu khác nhau; 33 câu từ VietJobs, 24 từ TopCV). Không có tin TopCV nào chung giữa nhãn yếu và TEST (0/125):
+  trùng là do câu chung chung ("Tiếng Anh giao tiếp tốt.", "Mô tả công việc") và một tin tuyển game được đăng lại
+  dưới mã tin khác. 8/30 câu có kỹ năng trong nhãn vàng.
+- Dev `skill_batch1` không trùng TEST.
+
+Ảnh hưởng tới số đã báo – chấm lại trên 970 câu sau khi bỏ 30 câu trùng (cùng dự đoán, không train lại):
+
+| | F1 trên 1.000 câu | F1 trên 970 câu |
+|---|---|---|
+| từ điển | 0,442 | 0,443 |
+| PhoBERT v3 seed 1 / 2 / 3 | 0,616 / 0,618 / 0,617 | 0,619 / 0,621 / 0,620 |
+
+Bỏ câu trùng làm F1 *tăng* nhẹ, nên số 0,617 không được đẩy lên nhờ rò rỉ. Số chính thức giữ nguyên trên 1.000
+câu; ghi kiểm tra này vào phần hạn chế. Lô nhãn yếu sau (nếu có) nên lọc câu TEST ngay khi sinh.
+
+### Kết quả B – DAPT (2026-11-19, chạy và chấm TEST một lần theo đăng ký trên)
+
+**DAPT (học tiếp MLM):**
+
+- Corpus: 48.092 tin, 567.888 câu; bỏ 397 câu trùng TEST.
+- Dữ liệu train: 58.182 đoạn, 9,4M subword. Dùng hết, không lấy mẫu bớt vì ước lượng 166 phút < 4 giờ.
+- Thời gian: 167 phút trên RTX 3050 Ti.
+- Loss MLM trên 500 đoạn giữ lại: **1,951 → 1,217** (perplexity 7,0 → 3,4). Mô hình đã quen văn phong tin tuyển dụng.
+
+**Fine-tune v3 từ mô hình DAPT, chấm `skill_test1` (1.000 câu):**
+
+| Seed | dev F1 | TEST P | TEST R | TEST F1 | v3 TEST F1 | ΔF1 (CI95, bootstrap theo tin) |
+|---|---|---|---|---|---|---|
+| 1 | 0,650 | 0,702 | 0,546 | 0,614 | 0,616 | −0,002 [−0,014; +0,011] |
+| 2 | 0,657 | 0,695 | 0,545 | 0,611 | 0,618 | −0,007 [−0,021; +0,006] |
+| 3 | 0,635 | 0,724 | 0,508 | 0,597 | 0,617 | **−0,020 [−0,037; −0,005]** |
+| TB | 0,647 ± 0,011 | 0,707 | 0,533 | **0,607 ± 0,009** | 0,617 | |
+
+Nhận xét:
+
+- Dev F1 trung bình gần như bằng v3 (0,647 so với 0,644).
+- Ghép thêm từ điển (`phobert+dict`) cũng không đổi kết luận: TEST 0,612 / 0,609 / 0,596.
+
+**Kết luận theo quy tắc đã đăng ký:** DAPT **không tốt hơn** v3.
+
+- Seed 1 và 2: không khác biệt, vì CI chứa 0.
+- Seed 3: kém hơn, vì CI nằm hẳn dưới 0.
+- Image `skill-extractor` giữ PhoBERT v3, không đổi.
+
+**Đối chiếu dự đoán:** dự đoán tăng +0,005 đến +0,02 là **sai**. Thực tế F1 trung bình giảm 0,010, recall không tăng.
+
+Cách hiểu (giả thuyết, chưa kiểm chứng):
+
+- PhoBERT-base-v2 vốn đã học trên tin tức và Wikipedia tiếng Việt, nên phần chữ thường trong tin tuyển dụng không mới với nó.
+- Loss MLM giảm phần lớn nhờ các đoạn khuôn mẫu lặp lại giữa các tin ("Mô tả công việc", phúc lợi). Những đoạn này không giúp nhận ranh giới span kỹ năng.
+- Nút thắt của WM2 là nhãn yếu bỏ sót (recall thấp ở mọi bản), không phải biểu diễn ngôn ngữ.
+
+Hạn chế: chỉ thử một cấu hình (1 epoch, lr 5e-5), không dò thêm vì đã đăng ký trước. Lúc chấm, repo có thay đổi chưa commit (`ie/dapt.py`, `--base`/`--tag` trong `ie/phobert.py`); khi commit thì ghi gitsha ở đây.
+
+Lệnh:
+
+    uv run python -m ie.dapt corpus && uv run python -m ie.dapt train
+    uv run python -m ie.phobert train --weak v3 --base data/models/phobert-dapt-vietjobs --tag dapt --seed <N>
+    uv run python -m ie.phobert eval --weak v3 --tag dapt --model data/models/wm2-phobert-v3-dapt-s<N> \
+        --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>
+    uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-v3-dapt \
+        --out data/eval/skill_test1_preds_v3_dapt.json --against data/eval/skill_test1_preds_v3.json
+
+## Cải thiện nhãn yếu WM2 – đăng ký trước (2026-11-19, ghi TRƯỚC khi chạy)
+
+Kết quả DAPT cho thấy nút thắt của WM2 là nhãn yếu bỏ sót: recall nhãn yếu v2 trên dev chỉ 0,48. Thử hai cách,
+mỗi cách đúng **một** cấu hình cố định dưới đây, không dò tham số. Không dùng gì rút ra từ phân tích lỗi TEST.
+
+**Cách 1 – từ điển từ kho tag toàn cục (nhãn yếu v4).**
+- Hiện mỗi tin chỉ được dò bằng tag của chính nó. Bản v4 gom thêm `technical_skills` của **toàn bộ** VietJobs
+  (mọi ngành, 48k tin) và `skill_tags` của TopCV (`topcv_v3`) thành một từ điển chung.
+- Lọc tag bằng `clean_tags` như cũ (bỏ kỹ năng mềm, ≤ 5 token), rồi giữ tag xuất hiện ở **≥ 3 tin khác nhau**.
+  Bỏ hẳn tin thuộc dev/test (`skill_batch1`, `skill_test1`) khi đếm.
+- v4 = nhãn v3 + span dò bằng từ điển chung ở chỗ v3 còn trống (không đè span cũ), rồi qua luật 0.4 (`refine`).
+- Đo độ nhiễu trên dev như v1/v2: cách gán v2 (tag + từ điển + luật) so với v2 + từ điển chung.
+
+**Cách 3 – giảm phạt token O khi train.** Nhãn yếu thiếu nhiều kỹ năng, nên token gán O không chắc là O.
+Loss của token nhãn O nhân hệ số **0,5**, token B/I giữ 1. Mọi thứ khác như v3.
+
+**Thí nghiệm:** công thức v3 (lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, chọn epoch theo dev), seed 1–3:
+- A: nhãn v4;
+- B: nhãn v3 + hệ số O 0,5;
+- C: nhãn v4 + hệ số O 0,5.
+
+**Chọn và chấm:**
+- Chọn cấu hình theo F1 `phobert` trung bình 3 seed **trên dev**.
+- Chỉ đem sang TEST nếu cấu hình tốt nhất có dev cao hơn v3 (0,644); nếu không thì ghi "không cải thiện" và dừng,
+  không chấm TEST.
+- Cấu hình được chọn chấm `skill_test1` **một lần**, so ghép cặp với v3 cùng seed (bootstrap theo tin, 1.000 lần).
+- Quy tắc kết luận giống DAPT: chỉ viết "tốt hơn" nếu CI95 của ΔF1 nằm hẳn trên 0 ở cả 3 seed. Image
+  `skill-extractor` chỉ đổi khi thỏa điều đó.
+
+**Dự đoán:**
+- Cách 1: recall nhãn yếu trên dev tăng 0,03–0,08, precision giảm ≤ 0,03.
+- Cách 3: recall mô hình tăng, precision giảm, F1 tăng 0–0,02.
+- Khả năng cao không cấu hình nào đạt quy tắc "tốt hơn ở cả 3 seed".
+
+### Kết quả cải thiện nhãn yếu (2026-11-19, chạy và chấm TEST một lần theo đăng ký trên)
+
+**Độ nhiễu nhãn yếu trên dev (cách 1):**
+
+| Nhãn yếu (dev, so với nhãn tay) | P | R | F1 |
+|---|---|---|---|
+| v2: tag + từ điển + luật | 0,812 | 0,476 | 0,600 |
+| v2 + kho tag chung (cách gán của v4) | 0,447 | 0,610 | 0,516 |
+
+- Kho tag có 48.194 tin và 12.054 tag; giữ lại 2.934 tag có ở ≥ 3 tin.
+- v4 thêm 18.393 span, nâng số câu có kỹ năng từ 7.350 lên 14.704.
+- Span thêm nhiều nhất là từ chung: `công nghệ` (850), `CNTT` (611), `hình ảnh` (415), `nhanh` (349), `thương hiệu`, `doanh nghiệp`, `quảng cáo`.
+- Nguyên nhân: tag `technical_skills` của VietJobs do LLM sinh, có nhiều danh từ chung; lọc theo tần suất không loại được, vì từ càng chung càng xuất hiện nhiều.
+
+**Dev, F1 `phobert` theo seed 1 / 2 / 3:**
+
+| Cấu hình | Dev F1 | Trung bình |
+|---|---|---|
+| v3 (mốc) | | 0,644 |
+| A: nhãn v4 | 0,543 / 0,530 / 0,535 | 0,536 |
+| B: v3 + hệ số O 0,5 | 0,664 / 0,676 / 0,664 | **0,668 ± 0,007** |
+| C: v4 + hệ số O 0,5 | 0,556 / 0,533 / 0,541 | 0,543 |
+
+- A và C: precision dev khoảng 0,46. Mô hình học đúng theo nhãn bẩn.
+- B là cấu hình duy nhất vượt v3 trên dev, nên đem sang TEST theo đăng ký.
+
+**TEST `skill_test1` (1.000 câu), cấu hình B, chấm một lần:**
+
+| Seed | P | R | F1 | v3 F1 | ΔF1 (CI95, bootstrap theo tin) |
+|---|---|---|---|---|---|
+| 1 | 0,692 | 0,530 | 0,600 | 0,616 | −0,016 [−0,032; +0,002] |
+| 2 | 0,655 | 0,601 | 0,627 | 0,618 | +0,009 [−0,007; +0,025] |
+| 3 | 0,644 | 0,596 | 0,619 | 0,617 | +0,002 [−0,015; +0,020] |
+| TB | 0,664 | 0,576 | **0,615 ± 0,014** | 0,617 | |
+
+Ghép thêm từ điển (`phobert+dict`): 0,598 / 0,625 / 0,618.
+
+**Kết luận theo quy tắc đã đăng ký:**
+- B **không khác biệt** so với v3: CI chứa 0 ở cả 3 seed.
+- Image `skill-extractor` giữ PhoBERT v3.
+- Cách 1 (v4) **làm kém đi** rõ rệt trên dev, nên không đem sang TEST.
+
+**Đối chiếu dự đoán:**
+- Cách 1: recall nhãn tăng 0,134, vượt khoảng dự đoán 0,03–0,08. Precision giảm 0,365 thay vì ≤ 0,03. Dự đoán **sai**.
+- Cách 3:
+  - Đúng chiều: recall tăng (seed 2–3 khoảng 0,60, so với khoảng 0,53 của v3 và DAPT), precision giảm.
+  - F1 không tăng: −0,002, nằm ngoài khoảng 0 đến +0,02 đã dự đoán, nhưng sát mép dưới.
+- Dự đoán chung "không cấu hình nào đạt quy tắc" là đúng.
+
+**Nhận xét:**
+- Dev tăng +0,024 nhưng TEST không tăng. Một phần do chọn epoch theo dev 300 câu, phần lạc quan trên dev ở đây cỡ 0,02–0,05, giống chênh dev–TEST đã thấy ở v3. Ghi vào hạn chế: dev 300 câu quá nhỏ để chọn giữa các cấu hình chênh nhau dưới 0,03.
+- Hệ số O chỉ dời điểm cân bằng giữa precision và recall, không thêm thông tin mới. Muốn F1 tăng thật thì cần nhãn có thêm thông tin đúng. Cách khả thi nhất là gán tay thêm câu train (cách 4).
+- Nếu thử lại kho tag chung thì phải lọc theo loại tag (ví dụ chỉ tên riêng Latin), và đăng ký trước như một bản mới.
+
+Repo chưa commit lúc chấm (`ie/weak_global.py`, `--o-weight` trong `ie/phobert.py`); ghi gitsha khi commit.
+
+Lệnh:
+
+    uv run python -m ie.weak_global
+    uv run python -m ie.phobert train --weak v4 --seed <N>
+    uv run python -m ie.phobert train --weak v3 --o-weight 0.5 --tag ow05 --seed <N>
+    uv run python -m ie.phobert train --weak v4 --o-weight 0.5 --tag ow05 --seed <N>
+    uv run python -m ie.phobert eval --weak v3 --tag ow05 --model data/models/wm2-phobert-v3-ow05-s<N> \
+        --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>
+    uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-v3-ow05 \
+        --out data/eval/skill_test1_preds_v3_ow05.json --against data/eval/skill_test1_preds_v3.json
+
+## Nhãn yếu bằng LLM theo guideline – đăng ký trước (2026-11-19, ghi TRƯỚC khi chạy)
+
+Hai thí nghiệm trước cho thấy WM2 bị giới hạn bởi nhãn yếu bỏ sót. Thử cho LLM gán nhãn câu train theo guideline 0.4.
+
+**Ràng buộc:**
+- Chỉ gửi câu **VietJobs** (bộ công khai, Pham Dinh et al., LREC 2026) ra API. Code chặn mọi câu không thuộc `it_v1`; không gửi câu crawl TopCV/ITviec, không gửi câu TEST.
+- Guideline gửi kèm bỏ phần quy trình, lịch sử, và mọi dòng ví dụ là chuỗi con của một câu `skill_test1` (3 dòng).
+- Nhãn LLM là nhãn yếu: chỉ dùng để train, không bao giờ làm test.
+- Ngân sách: tổng ≤ $3 (key OpenAI có sẵn). Bước thử dừng nếu vượt $0,50.
+
+**Bước thử (dev `skill_batch1`, 300 câu VietJobs):**
+- Gán bằng `gpt-6-luna` và `gpt-6.1-sol`, mỗi lần 20 câu, reasoning effort thấp.
+- Chấm như nhãn yếu v1/v2: seqeval strict so với nhãn tay. Mốc: nhãn yếu v2 có P 0,812 / R 0,476 / F1 0,600.
+- **Đi tiếp** nếu có mô hình đạt F1 ≥ 0,65 trên dev và chi phí ước cho toàn tập train vừa ngân sách; chọn mô hình rẻ nhất đạt mức này. Không mô hình nào đạt thì ghi lại và dừng.
+- Dev đã dùng để chọn cấu hình nhiều lần; ở bước này nó chỉ đo chất lượng nhãn, không chọn tham số mô hình.
+
+**Nếu đi tiếp (đăng ký phần train trước khi chạy, ghi ở mục kết quả bước thử):** gán toàn bộ câu train VietJobs, train PhoBERT theo công thức v3 (3 seed), chọn theo dev, chấm TEST một lần, quy tắc kết luận như DAPT.
+
+**Dự đoán:** Sol đạt F1 0,65–0,75 trên dev; Luna thấp hơn, khoảng 0,55–0,65.
+
+### Kết quả bước thử nhãn LLM trên dev (2026-11-19)
+
+| Nhãn trên dev `skill_batch1` (300 câu, so với nhãn tay) | P | R | F1 | Chi phí ước |
+|---|---|---|---|---|
+| Nhãn yếu v2 (tag + từ điển + luật) | 0,812 | 0,476 | 0,600 | 0 |
+| `gpt-6-luna`, effort low | 0,864 | 0,834 | **0,849** | $0,006 |
+| `gpt-6.1-sol`, effort low | 0,846 | 0,907 | **0,875** | $0,095 |
+
+- Cả hai vượt xa mức đi tiếp 0,65; recall gần gấp đôi nhãn yếu mà precision không giảm.
+- Token: 95k vào, phần lớn trúng cache (guideline); ra 8,5k (Luna) và 5,2k (Sol). Span không dò lại được trên token: 4 (Luna), 1 (Sol).
+- Dự đoán sai theo chiều tốt: dự đoán Sol 0,65–0,75, Luna 0,55–0,65.
+- Kiểm tra rò rỉ ngược: 2/300 câu dev chứa nguyên một ví dụ guideline; bỏ 2 câu đó thì Luna 0,846, Sol 0,873. Còn một phần lạc quan không đo được: nhiều quy tắc 0.3 được viết khi gán chính đợt dev này, nên nhãn LLM trên dev có thể khớp guideline tốt hơn trên câu lạ.
+- Theo quy tắc đã đăng ký: chọn **Luna** (rẻ nhất đạt mức). Ước cho 20.659 câu train VietJobs: ~$0,45. Sol ước ~$6,5, vượt ngân sách $3.
+
+**Đăng ký trước bước train (ghi TRƯỚC khi gán tập train):**
+- Nhãn `wm2_weak_v5` = file v3, thay nhãn của mọi câu VietJobs (20.659 câu) bằng nhãn Luna. Câu TopCV (3.485 câu) giữ nhãn v3, vì không được gửi ra API.
+- Train PhoBERT công thức v3 (lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, hệ số O 1), seed 1–3, chọn epoch theo dev.
+- Chỉ chấm TEST nếu dev trung bình > 0,644; chấm `skill_test1` một lần, so ghép cặp với v3. Quy tắc kết luận như DAPT: "tốt hơn" chỉ khi CI95 của ΔF1 > 0 ở cả 3 seed; khi đó image `skill-extractor` đổi sang bản v5.
+- Dự đoán: dev 0,68–0,75; TEST tăng +0,03 đến +0,08, chủ yếu nhờ recall. TEST là câu TopCV, khác nguồn với nhãn LLM, nên phần tăng có thể nhỏ hơn dev.
+
+### Kết quả PhoBERT trên nhãn LLM `wm2_weak_v5` (2026-11-19, chạy và chấm TEST một lần theo đăng ký trên)
+
+**Gán nhãn:**
+- `gpt-6-luna` gán 20.659 câu train VietJobs, ~$0,43, khoảng 1 giờ 50 phút.
+- 94 span không dò lại được trên token, đã bỏ.
+- Code chặn 3.485 câu TopCV, giữ nhãn v3.
+- v5 có 8.859 câu có kỹ năng và 21.891 span; v3 có 7.350 câu và 16.282 span.
+- Tổng chi phí API cả thí nghiệm (thử + gán) ~$0,54, tính từ số token và giá trang tổng hợp. Chưa đối chiếu hóa đơn OpenAI.
+
+| | Dev F1 (seed 1 / 2 / 3) | TB dev | TEST P | TEST R | TEST F1 (seed 1 / 2 / 3) | TB TEST |
+|---|---|---|---|---|---|---|
+| từ điển | | | | | | 0,442 |
+| PhoBERT v3 | | 0,644 | | | 0,616 / 0,618 / 0,617 | 0,617 |
+| **PhoBERT v5 (nhãn LLM)** | 0,794 / 0,801 / 0,796 | **0,797** | 0,725 | 0,734 | 0,729 / 0,727 / 0,734 | **0,730 ± 0,004** |
+
+**So ghép cặp với v3 cùng seed (bootstrap theo tin, 1.000 lần):**
+- Seed 1: ΔF1 +0,113 [+0,084; +0,144]
+- Seed 2: ΔF1 +0,109 [+0,080; +0,138]
+- Seed 3: ΔF1 +0,117 [+0,089; +0,147]
+- So với từ điển: +0,284 đến +0,292.
+
+**Kết luận theo quy tắc đã đăng ký:**
+- v5 **tốt hơn** v3: CI95 nằm hẳn trên 0 ở cả 3 seed.
+- Theo quy tắc, image `skill-extractor` đổi sang PhoBERT v5. Việc build lại image chưa làm.
+
+**Kiểm tra rò rỉ:**
+- 30 câu TEST trùng nguyên văn một câu train, giống lần kiểm tra trước. Ở v5, nhãn train của các câu này do LLM gán theo cùng guideline với nhãn vàng, nên đã chấm lại trên 970 câu còn lại.
+- Kết quả trên 970 câu: v5 0,729 / 0,728 / 0,736 (TB 0,731); v3 TB 0,620. Phần tăng không đến từ câu trùng.
+
+**Đối chiếu dự đoán:**
+- Dev: dự đoán 0,68–0,75, thực tế 0,797, cao hơn.
+- TEST: dự đoán +0,03 đến +0,08, thực tế +0,113, cao hơn.
+- Phần tăng đến từ cả hai phía:
+  - Recall tăng từ 0,53 lên 0,73.
+  - Precision tăng từ khoảng 0,70 lên 0,725. Các cách trước đều đổi precision lấy recall; cách này thì không.
+- Chênh dev–TEST còn 0,067 (v3 là 0,027). Phần chênh có thể do nhãn LLM trên câu VietJobs khớp dev (cũng là VietJobs) hơn câu TopCV.
+
+**Ý nghĩa cho báo cáo:**
+- Hai thí nghiệm âm tính trước (DAPT, hệ số O) và thí nghiệm này cùng chỉ ra: chất lượng nhãn train là nút thắt của WM2.
+- Thay nhãn yếu từ tag và từ điển bằng nhãn LLM theo guideline nâng F1 TEST từ 0,617 lên 0,730, với chi phí dưới $1.
+
+**Hạn chế:**
+- Nhãn LLM vẫn là nhãn yếu: F1 so với nhãn tay trên dev là 0,849.
+- Chỉ dùng một mô hình LLM, một lần gán, không đo độ ổn định giữa các lần gán.
+- Giá là ước lượng. Kết quả phụ thuộc dịch vụ ngoài: tái lập cần cùng phiên bản mô hình, nên file nhãn `train_luna.bio.jsonl` phải được giữ lại (không commit; lưu cùng dữ liệu).
+- Repo chưa commit lúc chấm (`ie/llm_label.py`, `ie/weak_llm.py`); ghi gitsha khi commit.
+
+Lệnh:
+
+    uv run python -m ie.llm_label --model gpt-6-luna --bio data/annotation/skill_batch1.bio.jsonl --name dev_gpt-6-luna --eval
+    uv run python -m ie.llm_label --model gpt-6-luna --bio data/weak/wm2_weak_v3.bio.jsonl --name train_luna --budget 1.0
+    uv run python -m ie.weak_llm --llm data/llm/train_luna.bio.jsonl
+    uv run python -m ie.phobert train --weak v5 --seed <N>
+    uv run python -m ie.phobert eval --weak v5 --model data/models/wm2-phobert-v5-s<N> \
+        --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>
+    uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-v5 \
+        --out data/eval/skill_test1_preds_v5.json --against data/eval/skill_test1_preds_v3.json
+
 ## Dữ liệu
 
 > Dữ liệu chính là tin tự crawl (TopCV, ITviec). VietJobs chỉ dùng cho nhãn yếu, từ điển alias và baseline – không dùng làm tập test.

@@ -47,7 +47,13 @@ def main() -> None:
     ap.add_argument("--by", choices=["posting", "sentence"], default="posting")
     ap.add_argument("--prefix", default="wm2-phobert", help="tên thư mục model trước -s<seed>, vd wm2-phobert-v2")
     ap.add_argument("--out", type=Path, default=Path("data/eval/skill_test1_preds.json"))
+    ap.add_argument(
+        "--against",
+        type=Path,
+        help="file dự đoán đã lưu của hệ khác (vd skill_test1_preds_v3.json): so thêm ΔF1 với `phobert_s<seed>` cùng seed",
+    )
     args = ap.parse_args()
+    other = json.loads(args.against.read_text("utf-8")) if args.against else None
 
     rows = prepare(read_bio(args.bio), MODELS / "seg_cache.jsonl")
     index, max_n = build_index(load_aliases())
@@ -72,6 +78,16 @@ def main() -> None:
             lo, hi = np.percentile(diffs, [2.5, 97.5])
             print(
                 f"s{s} {name:13s} F1={f1(c):.3f} ΔF1={f1(c) - f1(cd):+.3f} "
+                f"CI95=[{lo:+.3f}; {hi:+.3f}] p(Δ≤0)={np.mean(diffs <= 0):.3f}"
+            )
+        if other is not None:
+            assert other["ids"] == save["ids"], "hai file dự đoán phải cùng thứ tự câu"
+            co = counts(rows, other[f"phobert_s{s}"])
+            c = counts(rows, pred)
+            diffs = np.array([f1(c[ix]) - f1(co[ix]) for ix in boot])
+            lo, hi = np.percentile(diffs, [2.5, 97.5])
+            print(
+                f"s{s} so với {args.against.name}: F1 {f1(co):.3f} → {f1(c):.3f} ΔF1={f1(c) - f1(co):+.3f} "
                 f"CI95=[{lo:+.3f}; {hi:+.3f}] p(Δ≤0)={np.mean(diffs <= 0):.3f}"
             )
     args.out.parent.mkdir(parents=True, exist_ok=True)
