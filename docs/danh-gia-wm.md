@@ -1,6 +1,6 @@
 # Khung đánh giá phần Web Mining – JobLens
 
-*Bản 20/10/2026. Nguồn cho chương "Thực nghiệm" và "Thảo luận" của báo cáo WM, và cho buổi trình bày với giảng viên. Số có thật lấy từ `experiments/results.md`; số chưa đo để `<...>`.*
+*Bản 20/10/2026, cập nhật mục WM2 ngày 19/11/2026. Nguồn cho chương "Thực nghiệm" và "Thảo luận" của báo cáo WM, và cho buổi trình bày với giảng viên. Số có thật lấy từ `experiments/results.md`; số chưa đo để `<...>`.*
 
 ## 1. Project trả lời những câu hỏi nào
 
@@ -74,27 +74,31 @@ Mỗi mục có cùng 5 phần:
 - **Dùng để:** tìm span kỹ năng trong mô tả tin, chuẩn hóa về `skill_id` / ESCO.
 - **Vì sao chọn:**
   - **Từ điển** là baseline minh bạch, rẻ, giải thích được.
-  - **PhoBERT-base-v2** là mô hình ngôn ngữ tiếng Việt huấn luyện sẵn, phù hợp gán nhãn chuỗi. Nó yêu cầu tách từ trước (VnCoreNLP / underthesea).
-  - **Nhãn yếu** (tag kỹ năng của nhà tuyển dụng dò lại trong văn bản) thay cho hàng chục nghìn câu gán tay.
-  - Dùng mô hình sinh văn bản (LLM) thì tốn kém và khó tái lập, nên để ngoài phạm vi.
+  - **PhoBERT-base-v2** là mô hình ngôn ngữ tiếng Việt huấn luyện sẵn, phù hợp gán nhãn chuỗi. Nó yêu cầu tách từ trước (underthesea).
+  - **Nhãn yếu** thay cho hàng chục nghìn câu gán tay. Lúc đầu nhãn yếu lấy từ tag kỹ năng của nhà tuyển dụng dò lại trong văn bản, sau đó thêm luật làm sạch theo guideline và self-training.
+  - **LLM chỉ đóng vai người gán nhãn train, không chạy trong sản phẩm.** Mô hình LLM (`gpt-6-luna`) đọc guideline gán nhãn của nhóm rồi gán span cho câu train VietJobs; PhoBERT học từ các nhãn đó. Sản phẩm vẫn chỉ chạy PhoBERT trên CPU, nên không tốn chi phí API lúc dùng và không phụ thuộc dịch vụ ngoài khi chạy. Để tái lập, file nhãn LLM được giữ lại cùng dữ liệu.
 - **Đánh giá:**
-  - F1 thực thể strict (seqeval) trên test 1.000 câu TopCV; P/R tách riêng; F1 partial.
-  - Tỷ lệ kỹ năng mới (không có trong từ điển).
+  - F1 thực thể strict (seqeval) trên test 1.000 câu TopCV; P/R tách riêng.
+  - Recall riêng trên kỹ năng chưa thấy trong nhãn yếu.
   - Chênh lệch dev (VietJobs) và test (TopCV).
-  - Độ chính xác chuẩn hóa.
-  - Bootstrap 95%, 3 seed.
-- **Insight đã có (baseline từ điển trên dev):** **P = 0,869, R = 0,361, F1 = 0,510.**
-  - Từ điển **gán đúng nhưng bỏ sót gần 2/3 kỹ năng**.
-  - Bỏ sót thuộc hai loại:
-    - Kỹ năng dạng cụm tiếng Việt ("vận hành máy CNC", "thiết kế thumbnail", "phân khúc khách hàng").
-    - Tên công cụ hiếm ("Digiwin T100", "IBM MQ", "Katalon").
-  - Kết luận: danh sách cố định không theo kịp cách viết tin, và học máy có lý do để tồn tại.
-  - Lưu ý: P trên dev bị đẩy lên do dev được gợi ý bằng chính từ điển này. Số chính thức đo trên test.
+  - Bootstrap ghép cặp theo tin (1.000 lần), 3 seed. Mỗi thí nghiệm đăng ký trước cấu hình và quy tắc kết luận, rồi chấm test đúng một lần.
+- **Insight đã có (test `skill_test1`, 1.000 câu TopCV):**
+
+  | Hệ | P | R | F1 |
+  |---|---|---|---|
+  | Từ điển alias (baseline) | 0,742 | 0,315 | 0,442 |
+  | PhoBERT, nhãn yếu từ tag | 0,705 | 0,469 | 0,562 |
+  | PhoBERT, nhãn yếu self-training | 0,715 | 0,543 | 0,617 |
+  | **PhoBERT, nhãn yếu do LLM gán theo guideline** | **0,725** | **0,734** | **0,730** |
+
+  - Từ điển **gán đúng nhưng bỏ sót hơn 2/3 kỹ năng**. Bỏ sót thuộc hai loại: cụm tiếng Việt ("vận hành máy CNC", "phân khúc khách hàng") và tên công cụ hiếm ("Digiwin T100", "IBM MQ", "Katalon"). Danh sách cố định không theo kịp cách viết tin.
+  - 46% span vàng là kỹ năng không có trong nhãn yếu từ tag. Từ điển bắt được 0% nhóm này, PhoBERT bắt được 19–25%: mô hình có học được ngữ cảnh chứ không chỉ học thuộc danh sách.
+  - **Nút thắt của WM2 là chất lượng nhãn train, không phải mô hình.** Hai thí nghiệm sửa phía mô hình đều không cải thiện: học tiếp PhoBERT trên văn bản tin tuyển dụng (DAPT, 0,607) và giảm trọng số token O khi train (0,615, khoảng tin cậy chứa 0). Thay nhãn yếu bằng nhãn LLM theo guideline thì tăng +0,11 F1, khoảng tin cậy nằm trên 0 ở cả 3 seed, tăng cả P lẫn R.
+  - Nhãn LLM vẫn là nhãn yếu: so với nhãn tay trên dev được F1 0,849 (nhãn yếu theo luật: 0,600). Chi phí gán khoảng 20.700 câu là dưới 1 USD.
+  - Chênh dev (VietJobs) và test (TopCV): 0,797 so với 0,730. Mô hình học chủ yếu trên văn bản VietJobs vẫn giữ được phần lớn chất lượng trên trang TopCV.
 - **Insight sẽ có:**
-  - PhoBERT tăng R tới đâu (`<...>`).
   - Lỗi còn lại nằm ở ranh giới hay ở việc không nhận ra (khoảng cách strict − partial).
-  - Mô hình học trên VietJobs có giữ được chất lượng trên TopCV không (domain shift).
-  - Kỹ năng được yêu cầu nhiều nhất theo nhóm nghề.
+  - Kỹ năng được yêu cầu nhiều nhất theo nhóm nghề (bảng nhu cầu kỹ năng đã có bản đầu, xem `experiments/results.md`).
 - **Giúp sản phẩm:** trích kỹ năng từ tin và từ CV dán vào, dùng chung một bộ từ vựng. Đây là nền cho gợi ý việc (WM5), khoảng trống kỹ năng (UC013), thống kê nhu cầu kỹ năng.
 
 ### 2.5 WM1: Shingling + MinHash LSH (RQ2)
@@ -195,6 +199,7 @@ Mỗi mục có cùng 5 phần:
 | Luôn có baseline | Từ điển / độ phổ biến / tiêu đề + công ty | Không biết mô hình hơn được bao nhiêu |
 | κ trên ~10% | Hai người gán độc lập | Tập vàng là ý riêng một người |
 | Bootstrap 95% + 3 seed | Kèm mọi chênh lệch | Gọi "tốt hơn" khi chỉ là may |
+| Đăng ký trước | Ghi cấu hình, dự đoán và quy tắc kết luận vào `experiments/results.md` trước khi chạy; chấm test một lần | Chỉnh theo số test rồi chọn kết quả đẹp |
 | Người chấm không biết phương pháp | WM4, WM5 | Ưu ái phương pháp mới |
 | Phân tích ≥ 30 lỗi theo loại | Mỗi bài | Chỉ có con số, không biết vì sao |
 | Tái lập | Snapshot + seed + lệnh + commit cho mọi số | Số không kiểm được |
@@ -209,6 +214,7 @@ Mỗi mục có cùng 5 phần:
 3. **Công cụ hỗ trợ gán nhãn có thể làm lệch đánh giá** (gợi ý sẵn → precision dev bị đẩy lên). Vì vậy tách quy trình dev và test.
 4. **Crawl lịch sự phải được kiểm chứng bằng số** (mã HTTP), vì cấu hình mặc định có thể làm điều ngược lại.
 5. **Dữ liệu web lệch theo nguồn:** chủ yếu Hà Nội (199/304) và TP.HCM (70/304); chỉ tin đang mở; chỉ một trang. Mọi kết luận về "thị trường" phải nêu giới hạn này.
+6. **Với trích kỹ năng, sửa nhãn train hiệu quả hơn sửa mô hình.** DAPT và đổi hàm loss không giúp; cho LLM gán nhãn train theo đúng guideline của tập vàng thì F1 test tăng từ 0,617 lên 0,730 với chi phí dưới 1 USD. Guideline viết kỹ cho người gán cũng dùng lại được cho máy gán.
 
 ## 5. Hạn chế và mối đe dọa với kết luận
 
@@ -218,6 +224,8 @@ Mỗi mục có cùng 5 phần:
 - **Dữ liệu:** một đến hai trang, khoảng 2 tháng tin đang mở, chỉ ngành IT. Không suy rộng cho toàn thị trường.
 - **Tập test WM2 lấy từ cùng snapshot với dữ liệu crawl,** nhưng chọn theo tin, không trùng tin train.
 - **Dev WM2 có gợi ý từ điển,** nên số trên dev chỉ để chọn tham số, không để báo cáo.
+- **Nhãn train WM2 phụ thuộc một dịch vụ LLM bên ngoài.** Chỉ một mô hình, gán một lần, chưa đo độ ổn định giữa các lần gán; dịch vụ có thể đổi mô hình nên tái lập dựa vào file nhãn đã lưu. Chỉ câu VietJobs (giấy phép mở, có trích dẫn) được gửi đi; câu crawl TopCV/ITviec và câu test không rời máy.
+- **30/1.000 câu test trùng nguyên văn một câu train** (câu mẫu lặp giữa các tin). Đã chấm lại khi bỏ các câu này: kết luận không đổi (0,731 so với 0,620).
 
 ## 6. Gợi ý trình tự trình bày (10–15 phút)
 
