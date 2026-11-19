@@ -1,6 +1,6 @@
 """WM2 self-training: thêm span mà các model PhoBERT đều đoán (nhãn yếu bỏ sót) vào nhãn yếu, rồi train lại.
 
-    uv run python -m ie.self_train --src v2 --dst v3 --models wm2-phobert-v2-s1 wm2-phobert-v2-s2 wm2-phobert-v2-s3
+    uv run python -m ie.self_train --src rules --dst selftrain --models wm2-phobert-rules-s1 wm2-phobert-rules-s2 wm2-phobert-rules-s3
 
 - Chỉ chạy trên tập train nhãn yếu (đã loại tin dev/test); không chạm dev hay test.
 - Span được thêm khi: TẤT CẢ model cùng đoán đúng span đó (đồng thuận = độ chắc), không chồng span nhãn yếu sẵn có,
@@ -42,8 +42,8 @@ def main() -> None:
     from transformers import AutoModelForTokenClassification, AutoTokenizer
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--src", default="v2")
-    ap.add_argument("--dst", default="v3")
+    ap.add_argument("--src", default="rules")
+    ap.add_argument("--dst", default="selftrain")
     ap.add_argument("--models", nargs="+", required=True)
     args = ap.parse_args()
 

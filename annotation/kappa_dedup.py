@@ -22,7 +22,7 @@ Bước 3, rà lại theo guideline 0.2 (sau khi κ lộ ra 4 kiểu lệch):
     uv run python -m annotation.make_ls_project --title "WM1 dedup - rà lại 0.2" \
         --config annotation/label_studio_dedup.xml --tasks data/annotation/dedup_recheck02.labelstudio.json
     uv run python -m annotation.kappa_dedup merge --from-ls <project>
-    uv run python -m crawler.eval_dedup --labels data/annotation/dedup_batch1.labels_v02.jsonl
+    uv run python -m crawler.eval_dedup --labels data/annotation/dedup_batch1.relabeled.jsonl
 
 Lô rà lại chọn theo **nhãn và nguồn, không theo dự đoán của hệ**: mọi cặp người 1 gán "trùng", mọi cặp tick
 "khó", mọi cặp khác trang. Gán lại **mù** (project mới, không thấy nhãn cũ). Nhãn mới ghi đè nhãn cũ ở các
@@ -127,7 +127,7 @@ def cmd_score(args: argparse.Namespace) -> None:
 
 
 RECHECK = ANN / "dedup_recheck02.labelstudio.json"
-LABELS_V02 = ANN / "dedup_batch1.labels_v02.jsonl"
+LABELS_RELABELED = ANN / "dedup_batch1.relabeled.jsonl"
 
 
 def recheck_indices(rows: list[dict], tasks: dict[int, dict]) -> list[int]:
@@ -160,13 +160,13 @@ def cmd_merge(args: argparse.Namespace) -> None:
         if r["index"] in new and r["dup"] != new[r["index"]]["dup"]
     ]
     merged = [dict(new[r["index"]], relabeled=True) if r["index"] in new else dict(r, relabeled=False) for r in rows]
-    LABELS_V02.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in merged), "utf-8")
+    LABELS_RELABELED.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in merged), "utf-8")
     print(
         f"rà lại {len(new)} cặp, đổi nhãn {len(changed)}: trùng {sum(r['dup'] for r in rows)} -> {sum(r['dup'] for r in merged)}"
     )
     for i, old, now in changed:
         print(f"  index {i}: {'trùng' if old else 'không trùng'} -> {'trùng' if now else 'không trùng'}")
-    print(f"-> {LABELS_V02.relative_to(ROOT)}")
+    print(f"-> {LABELS_RELABELED.relative_to(ROOT)}")
 
 
 def main() -> None:

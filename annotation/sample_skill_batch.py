@@ -1,6 +1,6 @@
 """Rút mẫu câu từ tập IT để gán nhãn kỹ năng (WM2) – tập vàng do người gán, dùng làm dev/test.
 
-Cách chạy (cần data/vietjobs/it_v1.parquet – xem ie/vietjobs.py):
+Cách chạy (cần data/vietjobs/vietjobs_it.parquet – xem ie/vietjobs.py):
     uv run python -m annotation.sample_skill_batch --sentences 1500
 
 Ghi ra data/annotation/ (đã gitignore – KHÔNG commit):
@@ -22,7 +22,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-SNAPSHOT = ROOT / "data" / "vietjobs" / "it_v1.parquet"
+SNAPSHOT = ROOT / "data" / "vietjobs" / "vietjobs_it.parquet"
 OUT_DIR = ROOT / "data" / "annotation"
 SECTIONS = {"description": "desc", "requirements_text": "req"}
 

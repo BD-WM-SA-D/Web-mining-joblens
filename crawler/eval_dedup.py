@@ -14,7 +14,7 @@ Nhãn lưu ở data/annotation/dedup_batch1.labels.jsonl (không commit). Snapsh
 Ngưỡng MinHash **0,5 đặt trước** (mặc định của `crawler.dedup`), không chọn trên tập này. Bảng quét ngưỡng
 chỉ để đọc xu hướng; ngưỡng tốt nhất trên bảng đó là số lạc quan.
 
-v2 (đăng ký trước 2026-11-18): baseline mềm ∪ MinHash cắt khung công ty, so với v1 bằng bootstrap ghép cặp.
+Bản cắt khung (đăng ký trước 2026-11-18): baseline mềm ∪ MinHash cắt khung công ty, so với bản MinHash thường bằng bootstrap ghép cặp.
 """
 
 from __future__ import annotations
@@ -119,7 +119,7 @@ def main() -> None:
         "--labels",
         type=Path,
         default=LABELS,
-        help="file nhãn (mặc định guideline 0.1; 0.2: dedup_batch1.labels_v02.jsonl)",
+        help="file nhãn (mặc định guideline 0.1; 0.2: dedup_batch1.relabeled.jsonl)",
     )
     args = ap.parse_args()
 
@@ -141,12 +141,12 @@ def main() -> None:
     for s in STRATA:
         print(f"| {s} | {pools.get(s, 0)} | {n_by[s]} | {sum(r['dup'] for r in rows if r['stratum'] == s)} |")
 
-    v1 = f"v1: baseline ∪ MinHash ≥ {THRESHOLD}"
-    main_name = f"v2: baseline mềm ∪ MinHash cắt khung ≥ {THRESHOLD}"
+    plain = f"MinHash: baseline ∪ MinHash ≥ {THRESHOLD}"
+    main_name = f"MinHash cắt khung: baseline mềm ∪ MinHash cắt khung ≥ {THRESHOLD}"
     systems = {
         "baseline title+company": [r["baseline"] for r in rows],
         f"MinHash J ≥ {THRESHOLD}": [r["jaccard"] >= THRESHOLD for r in rows],
-        v1: [r["baseline"] or r["jaccard"] >= THRESHOLD for r in rows],
+        plain: [r["baseline"] or r["jaccard"] >= THRESHOLD for r in rows],
         "baseline mềm": [r["baseline_soft"] for r in rows],
         f"MinHash cắt khung ≥ {THRESHOLD}": [r["jaccard_cut"] >= THRESHOLD for r in rows],
         main_name: [r["baseline_soft"] or r["jaccard_cut"] >= THRESHOLD for r in rows],
@@ -160,13 +160,15 @@ def main() -> None:
         wp, wr, wf = prf(gold, pred, weight)
         print(f"| {name} | {p:.3f} | {r_:.3f} | {f:.3f} | [{lo:.3f}; {hi:.3f}] | {wp:.3f} / {wr:.3f} / {wf:.3f} |")
 
-    a, b = systems[main_name], systems[v1]
+    a, b = systems[main_name], systems[plain]
     d = [
         prf([gold[i] for i in ix], [a[i] for i in ix])[2] - prf([gold[i] for i in ix], [b[i] for i in ix])[2]
         for ix in idx
     ]
     lo, hi, p0 = ci(d)
-    print(f"\nΔF1 v2 − v1 = {prf(gold, a)[2] - prf(gold, b)[2]:+.3f}, CI95 [{lo:+.3f}; {hi:+.3f}], p(Δ≤0) {p0:.3f}")
+    print(
+        f"\nΔF1 cắt khung − MinHash = {prf(gold, a)[2] - prf(gold, b)[2]:+.3f}, CI95 [{lo:+.3f}; {hi:+.3f}], p(Δ≤0) {p0:.3f}"
+    )
 
     print("\nQuét ngưỡng MinHash (chỉ đọc xu hướng, không dùng để chọn ngưỡng báo cáo):")
     print("| J ≥ | P | R | F1 | số cặp báo trùng |")

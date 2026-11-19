@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ALIAS_CSV = ROOT / "ie" / "resources" / "skill_alias.csv"
 TOKEN_FILE = ROOT / "data" / ".ls_token"
-MODEL_VERSION = "dict-alias-v0"
+MODEL_VERSION = "dict-alias"
 TEST_PROJECT_HINT = "TEST"
 
 # Bỏ khi dò trong văn bản: quá chung, hoặc trùng từ thường ("Ai" = ai trong tiếng Việt)

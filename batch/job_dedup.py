@@ -1,11 +1,11 @@
 """Image `job-dedup` (WM1): silver.job_postings → silver.job_dedup (contract 0.1.1, merge theo job_uid).
 
-    uv run python -m batch.job_dedup --input-file data/crawl/topcv/topcv_v2.parquet \\
+    uv run python -m batch.job_dedup --input-file data/crawl/topcv/topcv_20261115.parquet \\
         --output-file data/batch/job_dedup.parquet --run-id local-1
     python -m batch.job_dedup --input-table silver.job_postings --input-snapshot <id> \\
         --output-table silver.job_dedup --run-id <airflow-run-id>
 
-Thuật toán = **dedup v2** đã chấm trên 300 cặp gán tay (`experiments/results.md`, mục "Kết quả dedup v2"):
+Thuật toán = **dedup MinHash cắt khung** đã chấm trên 300 cặp gán tay (`experiments/results.md`, mục "Kết quả dedup MinHash cắt khung"):
 khóa tiêu đề mềm + công ty ∪ MinHash LSH (shingle 3 từ, đã cắt khung mô tả chung của công ty) với Jaccard ≥ 0,5.
 F1 trên cặp 0,667 (nhãn guideline 0.1) / 0,645 (0.2). `--stub` = baseline khóa tiêu đề + công ty chính xác
 (P 1,000, R 0,33–0,39): không bao giờ gộp nhầm, nhưng bỏ sót nhiều.

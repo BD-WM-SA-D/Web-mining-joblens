@@ -194,10 +194,10 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
    uv run python -m annotation.export_bio --project <id> --batch skill_batch1
    ```
    Ghi bản export gốc và `<batch>.bio.jsonl` vào `data/annotation/` (không commit). Chỉ ghi số liệu (số câu, số span, κ) vào `experiments/results.md`.
-6. **Tập test `skill_test1`** (1.000 câu từ 125 tin TopCV, snapshot `topcv_v1`): tạo **project Label Studio riêng**, không trộn với đợt VietJobs `skill_batch1` (dev set). Tạo lại bằng:
+6. **Tập test `skill_test1`** (1.000 câu từ 125 tin TopCV, snapshot `topcv_20261012`): tạo **project Label Studio riêng**, không trộn với đợt VietJobs `skill_batch1` (dev set). Tạo lại bằng:
    ```
-   uv run python -m crawler.snapshot --source topcv --name topcv_v1
-   uv run python -m annotation.sample_skill_batch --snapshot data/crawl/topcv/topcv_v1.parquet --batch skill_test1 --sentences 1000 --seed 20261012 --max-per-posting 8
+   uv run python -m crawler.snapshot --source topcv --name topcv_20261012
+   uv run python -m annotation.sample_skill_batch --snapshot data/crawl/topcv/topcv_20261012.parquet --batch skill_test1 --sentences 1000 --seed 20261012 --max-per-posting 8
    ```
    Câu tiếng Anh gán như tiếng Việt (quy tắc 8); dòng tiêu đề kiểu "Your Recruitment Journey" thì Submit luôn.
 

@@ -91,7 +91,7 @@ def test_de_nghi_bi_phu_dinh_thi_khong_tinh():
     assert match_polarity(s) == "positive"
 
 
-def test_advice_false_tai_lap_duoc_v1():
+def test_advice_false_tai_lap_duoc_co_ban():
     s = "Cải thiện cơ sở vật chất"
     assert match_polarity(s, advice=True) == "negative"
     assert match_polarity(s, advice=False) == "neutral"
@@ -163,8 +163,8 @@ def test_need_to_mot_minh_khong_con_la_de_nghi():
     assert is_advice("The process needs to be more transparent")
 
 
-def test_tat_ca_ba_luat_tai_lap_v1():
-    """Tắt cả ba luật thì về đúng baseline v1 (chỉ đếm từ cảm xúc)."""
+def test_tat_ca_ba_luat_tai_lap_co_ban():
+    """Tắt cả ba luật thì về đúng baseline từ điển cơ bản (chỉ đếm từ cảm xúc)."""
     off = dict(advice=False, missing=False, tie=False)
     assert match_polarity("Cải thiện cơ sở vật chất", **off) == "neutral"
     assert match_polarity("Không có company trip", **off) == "neutral"

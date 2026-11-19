@@ -24,7 +24,7 @@ def macro2(gold: list[dict], pred: list[dict]) -> float:
 def main() -> None:
     drows, _, trows, _ = splits(GOLD, TEST_GOLD, SENTS)
     systems = {
-        "từ điển dict-v3": [as_dict(dict_predict(r["text"])) for r in trows],
+        "từ điển absa-dict": [as_dict(dict_predict(r["text"])) for r in trows],
         "luật section": section_rule(trows),
         "mô hình lai (seed 1)": MODELS_FN["hybrid"](drows, trows, seed=1),
     }

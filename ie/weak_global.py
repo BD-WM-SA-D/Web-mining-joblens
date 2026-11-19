@@ -1,14 +1,14 @@
-"""Nhãn yếu v4 cho WM2: thêm từ điển gom từ kho tag toàn cục (mọi tin VietJobs + TopCV) vào nhãn v3.
+"""Nhãn yếu kho tag chung cho WM2: thêm từ điển gom từ kho tag toàn cục (mọi tin VietJobs + TopCV) vào nhãn self-training.
 
     uv run python -m ie.weak_global --eval-only    # chỉ đo độ nhiễu trên dev
-    uv run python -m ie.weak_global                # sinh data/weak/wm2_weak_v4.bio.jsonl
+    uv run python -m ie.weak_global                # sinh data/weak/wm2_weak_globaltag.bio.jsonl
 
 Cấu hình theo mục đăng ký trước "Cải thiện nhãn yếu WM2" trong `experiments/results.md` – không đổi sau khi xem số.
 
-- Ở v1–v3 mỗi tin chỉ được dò bằng tag của chính nó; tên công cụ hiếm mà tin không gắn tag thì bị bỏ sót.
+- Ở các bộ nhãn trước, mỗi tin chỉ được dò bằng tag của chính nó; tên công cụ hiếm mà tin không gắn tag thì bị bỏ sót.
 - Từ điển chung: `technical_skills` của toàn bộ VietJobs (mọi ngành) + `skill_tags` TopCV, lọc bằng `clean_tags`,
   giữ tag có ở ≥ MIN_JOBS tin khác nhau. Tin thuộc dev/test không được đếm.
-- v4 = nhãn v3 + span dò bằng từ điển chung ở chỗ v3 còn trống (không đè span cũ), rồi qua luật 0.4 (`refine`).
+- Bộ này = nhãn self-training + span dò bằng từ điển chung ở chỗ còn trống (không đè span cũ), rồi qua luật 0.4 (`refine`).
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from ie.weak_labels import DEV_BIO, WEAK_DIR, _list, clean_tags, excluded_uids, 
 from ie.weak_rules import refine
 
 ROOT = Path(__file__).resolve().parents[1]
-TOPCV = ROOT / "data" / "crawl" / "topcv" / "topcv_v3.parquet"
+TOPCV = ROOT / "data" / "crawl" / "topcv" / "topcv_20261118.parquet"
 MIN_JOBS = 3
 
 
@@ -72,11 +72,11 @@ def eval_dev(vocab: list[str], soft: set[str]) -> None:
     dict_forms = load_aliases()
     g_index, g_max = build_index(vocab)
     gold = [r["tags"] for r in rows]
-    v2 = [label_tokens(r["tokens"], dict_forms + tags_by_uid.get(r["job_uid"], []), "v2") for r in rows]
-    v4 = [add_spans(r["tokens"], p, tag(r["tokens"], g_index, g_max)) for r, p in zip(rows, v2, strict=True)]
+    rules = [label_tokens(r["tokens"], dict_forms + tags_by_uid.get(r["job_uid"], []), "rules") for r in rows]
+    glob = [add_spans(r["tokens"], p, tag(r["tokens"], g_index, g_max)) for r, p in zip(rows, rules, strict=True)]
     kw = {"mode": "strict", "scheme": IOB2}
     print(f"Nhãn yếu trên dev {DEV_BIO.name} (so với nhãn tay, seqeval strict):")
-    for name, pred in (("v2 tag+dict", v2), ("v2 + kho chung", v4)):
+    for name, pred in (("tag+dict+luật", rules), ("tag+dict+luật + kho chung", glob)):
         p, r, f = (fn(gold, pred, **kw) for fn in (precision_score, recall_score, f1_score))
         print(f"  {name:16s} P={p:.3f} R={r:.3f} F1={f:.3f}")
 
@@ -84,8 +84,8 @@ def eval_dev(vocab: list[str], soft: set[str]) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--eval-only", action="store_true")
-    ap.add_argument("--src", type=Path, default=WEAK_DIR / "wm2_weak_v3.bio.jsonl")
-    ap.add_argument("--out", type=Path, default=WEAK_DIR / "wm2_weak_v4.bio.jsonl")
+    ap.add_argument("--src", type=Path, default=WEAK_DIR / "wm2_weak_selftrain.bio.jsonl")
+    ap.add_argument("--out", type=Path, default=WEAK_DIR / "wm2_weak_globaltag.bio.jsonl")
     args = ap.parse_args()
 
     vocab, soft = global_vocab()
@@ -106,7 +106,9 @@ def main() -> None:
             n_pos += k > 0
             n_span += k
             f.write(json.dumps({**r, "tags": tags}, ensure_ascii=False) + "\n")
-    print(f"v4: {n_sent} câu, {n_pos} câu có kỹ năng, {n_span} span (thêm {sum(added.values())}) → {args.out}")
+    print(
+        f"kho tag chung: {n_sent} câu, {n_pos} câu có kỹ năng, {n_span} span (thêm {sum(added.values())}) → {args.out}"
+    )
     print("Span thêm nhiều nhất:", added.most_common(40))
 
 

@@ -19,7 +19,7 @@ import re
 import unicodedata
 from pathlib import Path
 
-VERSION = "dict-v3"  # v1 chỉ đếm từ cảm xúc; v2 thêm bảng 2c + luật đề nghị; v3 thêm luật "không có" và luật hòa
+VERSION = "absa-dict"  # bản cơ bản chỉ đếm từ cảm xúc; bản mở rộng thêm bảng 2c + luật đề nghị; bản đủ luật thêm luật "không có" và luật hòa
 RES = Path(__file__).parent / "resources"
 ASPECTS = (
     "salary_benefits",
@@ -202,7 +202,7 @@ def match_polarity(text: str, advice: bool = True, missing: bool = True, tie: bo
       `neutral`. "Great environment, but unfair performance review" là một lời chê; `neutral` dành
       cho câu **không đánh giá gì**, không phải câu đánh giá hai chiều (guideline mục 2d).
 
-    Tắt cả ba là baseline v1 (chỉ đếm từ cảm xúc).
+    Tắt cả ba là baseline từ điển cơ bản (chỉ đếm từ cảm xúc).
     """
     s = norm(text)
     words = WORD_RE.findall(s)

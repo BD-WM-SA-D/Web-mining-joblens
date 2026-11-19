@@ -45,12 +45,14 @@ def main() -> None:
     ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3])
     ap.add_argument("--b", type=int, default=1000)
     ap.add_argument("--by", choices=["posting", "sentence"], default="posting")
-    ap.add_argument("--prefix", default="wm2-phobert", help="tên thư mục model trước -s<seed>, vd wm2-phobert-v2")
+    ap.add_argument(
+        "--prefix", default="wm2-phobert-tag", help="tên thư mục model trước -s<seed>, vd wm2-phobert-rules"
+    )
     ap.add_argument("--out", type=Path, default=Path("data/eval/skill_test1_preds.json"))
     ap.add_argument(
         "--against",
         type=Path,
-        help="file dự đoán đã lưu của hệ khác (vd skill_test1_preds_v3.json): so thêm ΔF1 với `phobert_s<seed>` cùng seed",
+        help="file dự đoán đã lưu của hệ khác (vd skill_test1_preds_selftrain.json): so thêm ΔF1 với `phobert_s<seed>` cùng seed",
     )
     args = ap.parse_args()
     other = json.loads(args.against.read_text("utf-8")) if args.against else None

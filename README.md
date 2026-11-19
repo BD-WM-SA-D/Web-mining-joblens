@@ -36,7 +36,7 @@ cp .env.example .env
 
 ```
 crawler/       spiders, parser, dedup, producer ghi vào Kafka
-ie/            WM2 – trích xuất kỹ năng (từ điển + regex → PhoBERT)
+ie/            WM2 – trích xuất kỹ năng (từ điển alias → PhoBERT train trên nhãn yếu; nhãn yếu do LLM gán theo guideline)
 absa/          WM3 – khai phá quan điểm theo khía cạnh
 retrieval/     WM4 – BM25, hybrid
 recsys/        WM5 – gợi ý việc làm
@@ -53,11 +53,11 @@ docs/adr/      ADR
 ## mining-service (bản stub)
 
 API cho app (PTTKHT) theo hợp đồng `joblens/schemas/api/mining.v1.yaml`. Bản stub: trích kỹ năng bằng từ điển alias,
-gợi ý bằng đếm kỹ năng trùng trên snapshot TopCV `topcv_v1`. Sẽ thay bằng PhoBERT (WM2) và content-based (WM5) mà không
+gợi ý bằng đếm kỹ năng trùng trên snapshot TopCV `topcv_20261012`. Sẽ thay bằng PhoBERT (WM2) và content-based (WM5) mà không
 đổi hợp đồng.
 
 ```bash
-uv run python -m service.index                        # chỉ mục job_uid → skill_id (cần data/crawl/topcv/topcv_v1.parquet)
+uv run python -m service.index                        # chỉ mục job_uid → skill_id (cần data/crawl/topcv/topcv_20261012.parquet)
 uv run uvicorn service.app:app --port 8091            # hoặc image: images/mining-service/Dockerfile
 
 curl -s localhost:8091/health
@@ -72,8 +72,9 @@ curl -s -X POST localhost:8091/v1/recommend -H 'Content-Type: application/json' 
 
 ## Tài liệu
 
-- Báo cáo môn: [`docs/`](docs/)
-- Quyết định kiến trúc: [`docs/adr/`](docs/adr/)
+- Báo cáo môn: [`docs/`](docs/); khung đánh giá [`docs/danh-gia-wm.md`](docs/danh-gia-wm.md)
+- Luồng xử lý WM2 (dữ liệu → nhãn → train → chấm → image → `silver.job_skills`): [`docs/luong-xu-ly-wm2.md`](docs/luong-xu-ly-wm2.md)
+- Quyết định kiến trúc: [`docs/adr/`](docs/adr/) – [WM-0001: LLM chỉ gán nhãn train, không chạy trong sản phẩm](docs/adr/wm-0001-llm-gan-nhan-train.md)
 - Thuật ngữ: [`glossary.md` trong repo joblens](https://github.com/BD-WM-SA-D/joblens/blob/main/glossary.md)
 
 ## Phụ thuộc (chỉ để tham khảo, không thuộc phần chấm)
@@ -87,7 +88,7 @@ curl -s -X POST localhost:8091/v1/recommend -H 'Content-Type: application/json' 
 
 | Tag | Ngày | Iceberg tag / snapshot | Ghi chú |
 |---|---|---|---|
-| `report-wm-v1` | <dd/mm/yyyy> | <…> | <version model> |
+| `report-wm` | <dd/mm/yyyy> | <…> | <version model> |
 
 ## Dữ liệu và giấy phép
 

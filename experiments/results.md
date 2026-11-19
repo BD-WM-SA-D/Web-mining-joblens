@@ -2,6 +2,20 @@
 
 Chỉ ghi số liệu, không ghi dữ liệu gốc. Mỗi số kèm snapshot dữ liệu và lệnh tạo ra nó.
 
+**Tên gọi dùng trong file này.** Mỗi mô hình gọi theo cách làm ra nó, không đánh số phiên bản.
+
+| Bài | Tên | Nghĩa |
+|---|---|---|
+| WM2 | nhãn yếu từ tag (`tag`) | tag "Kỹ năng cần có" của nhà tuyển dụng + từ điển alias |
+| WM2 | nhãn yếu theo luật (`rules`) | như trên, thêm luật làm sạch theo guideline 0.4 |
+| WM2 | nhãn yếu self-training (`selftrain`) | nhãn theo luật + span mà ba model PhoBERT cùng đoán |
+| WM2 | nhãn yếu kho tag chung (`globaltag`) | self-training + từ điển gom từ tag của mọi tin |
+| WM2 | nhãn yếu LLM (`llm`) | câu VietJobs do LLM gán theo guideline 0.4, câu TopCV giữ nhãn self-training |
+| WM1 | MinHash / MinHash cắt khung | khóa tiêu đề + công ty ∪ MinHash; bản cắt khung thêm tiêu đề mềm và bỏ phần mô tả chung của công ty |
+| WM3 | từ điển cơ bản / mở rộng / đủ luật | chỉ đếm từ cảm xúc; thêm bảng 2c và luật đề nghị; thêm luật "không có" và luật hòa (`absa-dict`) |
+| WM5 | log cũ / log đã sửa | log synthetic trước và sau khi sửa lỗi dồn lượt xem về ngày cuối |
+| Dữ liệu | `topcv_<ngày>`, `itviec_<ngày>`, `vietjobs_it` | snapshot đặt theo ngày tạo; `vietjobs_it` là tập tin IT của VietJobs |
+
 ## Sửa sau phản biện (2026-11-17)
 
 Một bản phản biện ở vai người chấm (`data/phan-bien-wm-2026-11-17.md`, cục bộ) chỉ ra các chỗ đo sai
@@ -10,10 +24,10 @@ tại chỗ. Không chấm thêm hệ mới nào trên TEST: các phép đo WM2/
 
 | Mục | Hỏi | Kết quả đo lại | Kết luận cũ |
 |---|---|---|---|
-| WM5 | Mốc 70% mà train 929 / test 2.612? | **Lỗi thật, hai lỗi chồng nhau**: bộ sinh log dồn 74% lượt xem vào một ngày, hàm chia đưa cả ngày đó sang test. Sửa cả hai, log v2. content-tfidf nDCG@10 **0,181 → 0,071** | Thứ tự giữ, số giảm một nửa; "6 lần" → 4,7 lần |
+| WM5 | Mốc 70% mà train 929 / test 2.612? | **Lỗi thật, hai lỗi chồng nhau**: bộ sinh log dồn 74% lượt xem vào một ngày, hàm chia đưa cả ngày đó sang test. Sửa cả hai, sinh lại log. content-tfidf nDCG@10 **0,181 → 0,071** | Thứ tự giữ, số giảm một nửa; "6 lần" → 4,7 lần |
 | WM2 | CI theo câu hẹp giả? (1.000 câu / 125 tin) | Bootstrap **theo tin**: ΔF1 seed 1 [+0,077; +0,149] (theo câu [+0,086; +0,143]) | Đứng – CI rộng hơn nhưng không chứa 0 |
 | WM2 | F1 partial? | Từ điển 0,525; PhoBERT 0,632 / 0,669 / 0,641. Khoảng strict–partial ~0,08 ở **cả hai** hệ | Đứng – PhoBERT hơn không phải nhờ cắt mép |
-| WM2 | Chỉ nội suy từ điển? | 528/1.149 span vàng (46%) **chưa thấy** trong nhãn yếu v1. Recall trên nhóm đó: từ điển 0,000, PhoBERT **0,19–0,25** | Đứng – hơn nửa phần recall PhoBERT tăng thêm là ở kỹ năng chưa thấy |
+| WM2 | Chỉ nội suy từ điển? | 528/1.149 span vàng (46%) **chưa thấy** trong nhãn yếu từ tag. Recall trên nhóm đó: từ điển 0,000, PhoBERT **0,19–0,25** | Đứng – hơn nửa phần recall PhoBERT tăng thêm là ở kỹ năng chưa thấy |
 | WM2 | Câu bị đoán rỗng? | Trong câu có kỹ năng: từ điển rỗng **49,5%**, PhoBERT 27–32%. Tìm đúng ≥ 1 span: 0,410 so với 0,54–0,58 | Bổ sung |
 | WM3 | Người gán thấy `section`? | **Đúng** – config Label Studio hiện `phần: $section`. Chưa kiểm được nhãn có suy từ `section` không: cần lô mù (gán lại khi ẩn `section`) | **Đang mở** |
 | WM3 | Bỏ `section` khỏi mô hình? | Dev: 0,770 → **0,709**, vẫn hơn từ điển 0,605. Nhưng riêng luật `section` được 0,774 trên dev, và chia fold theo review thì mô hình lai cho **đúng từng số** như luật `section` | Mô hình học được phần ngoài `section` (~0,10 trên dev), nhưng không vượt được `section` |
@@ -36,19 +50,19 @@ Lệnh: `uv run python -m experiments.diag_wm2`, `uv run python -m experiments.d
 ## Chạy lại một lượt (2026-11-18)
 
 `bash experiments/run_all.sh` chạy lại mọi số chính thức, không crawl. Lượt đầu trên `217f81c-dirty`
-(train lại PhoBERT v1, ~55 phút; log `data/logs/run_all-20261118-1555` và `-1641`). **Lượt chính thức trên
+(train lại PhoBERT nhãn tag, ~55 phút; log `data/logs/run_all-20261118-1555` và `-1641`). **Lượt chính thức trên
 commit sạch `a2f03a8`** (31 bước, ~17 phút, log `data/logs/run_all-20261118-1655`): mọi file
 `experiments/runs/2026-11-18-*-test-*.json` ghi `git_commit: a2f03a8`; chỉ còn 6 file dev của lần train lại
-PhoBERT v1 mang `217f81c-dirty` (số dev, không phải số báo cáo). Hai lượt ra cùng số. Kết quả so với số đã ghi:
+PhoBERT nhãn tag mang `217f81c-dirty` (số dev, không phải số báo cáo). Hai lượt ra cùng số. Kết quả so với số đã ghi:
 
 | Bài | Khớp? | Ghi chú |
 |---|---|---|
 | WM1 dedup (nhãn 0.1 và 0.2), κ | Khớp từng số | |
-| WM2 từ điển, PhoBERT v3 (hệ chính) | Khớp từng số | Dự đoán v3 giống hệt từng byte lần chấm trước |
-| WM2 PhoBERT v1 (số cũ) | Trung bình khớp (0,562 ± 0,015) | Model v1 bị xóa nhầm khi dọn ổ, train lại 3 seed; từng seed lệch ≤ 0,009 (0,547 / 0,577 / 0,563 so với 0,555 / 0,578 / 0,554) do GPU không tất định. Kết luận giữ nguyên |
+| WM2 từ điển, PhoBERT self-training (hệ chính lúc đó) | Khớp từng số | Dự đoán giống hệt từng byte lần chấm trước |
+| WM2 PhoBERT nhãn tag (số cũ) | Trung bình khớp (0,562 ± 0,015) | Model nhãn tag bị xóa nhầm khi dọn ổ, train lại 3 seed; từng seed lệch ≤ 0,009 (0,547 / 0,577 / 0,563 so với 0,555 / 0,578 / 0,554) do GPU không tất định. Kết luận giữ nguyên |
 | WM2 κ | Không tái lập được 0,650 | Xem mục κ WM2: nhãn người 1 đã sửa sau khi đo, ra 0,675 |
 | WM3 TEST, so với từ điển và luật `section`, đối chiếu sao, κ | Khớp | CV dev của mô hình lai 0,774 (đã ghi 0,768; nằm trong khoảng 5 seed 0,768–0,779) |
-| WM5 | Khớp từng số | Log v2 sinh lại giống hệt (cùng sha256) |
+| WM5 | Khớp từng số | Log đã sửa sinh lại giống hệt (cùng sha256) |
 | WM6 | Khớp | |
 | Nhu cầu kỹ năng | Chạy được | |
 
@@ -69,8 +83,8 @@ tượng: BD đo pipeline chuẩn hóa trường có sẵn, ở đây đo mô h�
 | `chu_thuong` | – | mọi token | chữ thường hết |
 
 - WM1: mỗi tin bị nhiễu độc lập với xác suất **0,5** (để khoảng một nửa số cặp có hai bản khác nhau), seed
-  20261118. Báo P/R/F1 của baseline, v1, v2 cho từng loại nhiễu cạnh số khi không nhiễu.
-- WM2: mọi câu của TEST bị nhiễu (go_sai: 10% từ). Báo F1 strict của từ điển và PhoBERT v3 (3 seed, trung bình).
+  20261118. Báo P/R/F1 của baseline, bản MinHash, bản cắt khung cho từng loại nhiễu cạnh số khi không nhiễu.
+- WM2: mọi câu của TEST bị nhiễu (go_sai: 10% từ). Báo F1 strict của từ điển và PhoBERT self-training (3 seed, trung bình).
 - Dự đoán trước (để đối chiếu, không để chọn): baseline khóa tiêu đề hỏng nặng với `tieu_de_them` và `bo_dau`;
   MinHash chịu `go_sai` tốt hơn khóa tiêu đề; từ điển hỏng nặng với `bo_dau`, PhoBERT ít hơn.
 
@@ -79,7 +93,7 @@ tượng: BD đo pipeline chuẩn hóa trường có sẵn, ở đây đo mô h�
 **WM1** – 300 cặp, nhãn 0.2 (13 cặp trùng; mỗi cặp trùng bắt được hay không làm R đổi 0,077, nên chỉ đọc
 chênh lệch lớn):
 
-| Nhiễu | baseline P / R / F1 | v1 P / R / F1 | v2 P / R / F1 | cặp có bản nhiễu |
+| Nhiễu | baseline P / R / F1 | bản MinHash P / R / F1 | bản cắt khung P / R / F1 | cặp có bản nhiễu |
 |---|---|---|---|---|
 | không | 1,000 / 0,385 / 0,556 | 0,323 / 0,769 / 0,455 | 0,556 / 0,769 / **0,645** | 0 |
 | `bo_dau` | 1,000 / 0,231 / 0,375 | 0,333 / 0,538 / 0,412 | 0,571 / 0,615 / 0,593 | 138 |
@@ -88,16 +102,16 @@ chênh lệch lớn):
 | `cat_mo_ta` | 1,000 / 0,385 / 0,556 | 0,429 / 0,462 / 0,444 | 0,500 / 0,538 / **0,519** | 231 |
 
 - Đúng dự đoán: khóa tiêu đề chính xác (baseline) mất cặp trùng khi tiêu đề bị thêm chữ (R 0,385 → 0,308) hoặc
-  mất dấu (→ 0,231). **v2 không bị `tieu_de_them` ảnh hưởng** (vẫn 0,645): tiêu đề mềm bỏ được địa điểm và
+  mất dấu (→ 0,231). **bản cắt khung không bị `tieu_de_them` ảnh hưởng** (vẫn 0,645): tiêu đề mềm bỏ được địa điểm và
   ngoặc, phần còn lại do MinHash trên mô tả gánh.
-- Điểm yếu thật của v2 là **mô tả bị cắt** (F1 0,645 → 0,519): MinHash so tập shingle nên bản ngắn hơn 40% kéo
-  Jaccard xuống dưới 0,5. Bỏ dấu cũng làm mất 2/10 cặp v2 đang bắt.
-- Gõ sai 10% từ gần như không ảnh hưởng v2; với v1 còn làm *tăng* P (báo nhầm cùng công ty có Jaccard sát 0,5
+- Điểm yếu thật của bản cắt khung là **mô tả bị cắt** (F1 0,645 → 0,519): MinHash so tập shingle nên bản ngắn hơn 40% kéo
+  Jaccard xuống dưới 0,5. Bỏ dấu cũng làm mất 2/10 cặp bản cắt khung đang bắt.
+- Gõ sai 10% từ gần như không ảnh hưởng bản cắt khung; với bản MinHash còn làm *tăng* P (báo nhầm cùng công ty có Jaccard sát 0,5
   bị đẩy xuống dưới ngưỡng) – không phải ưu điểm, chỉ là các cặp sát ngưỡng.
 
 **WM2** – `skill_test1`, 1.000 câu, mọi câu bị nhiễu:
 
-| Nhiễu | từ điển F1 | PhoBERT v3 F1 (seed 1 / 2 / 3) | PhoBERT TB | PhoBERT − từ điển |
+| Nhiễu | từ điển F1 | PhoBERT self-training F1 (seed 1 / 2 / 3) | PhoBERT TB | PhoBERT − từ điển |
 |---|---|---|---|---|
 | không | 0,442 | 0,616 / 0,618 / 0,617 | **0,617** | +0,175 |
 | `bo_dau` | 0,426 | 0,519 / 0,527 / 0,518 | 0,521 (−0,096) | +0,095 |
@@ -123,8 +137,8 @@ khác, và cho PhoBERT đọc văn bản tin tuyển dụng trước khi fine-tu
 
 ### A. WM6 – cụm kỹ năng có lặp lại trên VietJobs không
 
-- Dữ liệu: VietJobs `it_v1` (1.906 tin ngành CNTT). Đồ thị đối chiếu: đồ thị crawl đã báo (TopCV `topcv_v2` +
-  ITviec `itviec_v1`, 867 tin).
+- Dữ liệu: VietJobs `vietjobs_it` (1.906 tin ngành CNTT). Đồ thị đối chiếu: đồ thị crawl đã báo (TopCV `topcv_20261115` +
+  ITviec `itviec_20261113`, 867 tin).
 - Cách dựng giữ nguyên: từ điển alias trên tiêu đề + mô tả + yêu cầu, `min_df` 5, `min_weight` 3, NPMI ≥ 0,3,
   Louvain seed 1, resolution 1. **Không** dùng cột `technical_skills` của VietJobs (sinh bằng LLM, khác loại với
   tag nhà tuyển dụng). Vì đồ thị crawl có dùng tag nhà tuyển dụng, dựng thêm bản crawl **không tag** để so cùng cách.
@@ -149,9 +163,9 @@ khác, và cho PhoBERT đọc văn bản tin tuyển dụng trước khi fine-tu
 - Cấu hình cố định: che 15% subword, độ dài tối đa 256, lr 5e-5, warmup 6%, weight decay 0,01, batch hiệu dụng 32,
   1 epoch, seed 1, fp16. Nếu ước lượng thời gian > 4 giờ trên RTX 3050 Ti thì lấy mẫu ngẫu nhiên (seed 1) bớt câu
   cho vừa, ghi số câu thật đã dùng.
-- Fine-tune: đúng công thức v3 (nhãn yếu v3, lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, chọn epoch trên dev
+- Fine-tune: đúng công thức chuẩn (nhãn yếu self-training, lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, chọn epoch trên dev
   `skill_batch1`), seed 1–3, **chỉ thay mô hình gốc**.
-- Chấm `skill_test1` **một lần**. Số chính: F1 trung bình 3 seed so với v3 (0,617); ΔF1 giữa DAPT-v3 và v3 cùng
+- Chấm `skill_test1` **một lần**. Số chính: F1 trung bình 3 seed so với bản self-training (0,617); ΔF1 giữa DAPT + self-training và bản self-training cùng
   seed, bootstrap ghép cặp theo tin (1.000 lần).
 - Quy tắc kết luận: chỉ viết "DAPT tốt hơn" nếu CI95 của ΔF1 nằm hẳn trên 0 ở cả 3 seed; ngược lại viết "không
   khác biệt" hoặc "kém hơn". Image `skill-extractor` chỉ đổi sang DAPT nếu tốt hơn theo quy tắc này.
@@ -213,7 +227,7 @@ ITviec**: chúng lặp lại trên một kho tin khác, khác thời gian, lớn
 - VietJobs có thể chứa tin cùng vị trí với tin crawl (cùng thị trường), không gộp được vì VietJobs không có tên
   công ty.
 
-Lệnh: `uv run python -m graph.build --snapshots data/vietjobs/it_v1.parquet --no-tags --out data/graph/skill_graph_vietjobs.json`;
+Lệnh: `uv run python -m graph.build --snapshots data/vietjobs/vietjobs_it.parquet --no-tags --out data/graph/skill_graph_vietjobs.json`;
 `uv run python -m graph.build --no-tags --out data/graph/skill_graph_dict_notags.json`;
 `uv run python -m graph.analyze cluster --graph data/graph/skill_graph_vietjobs.json --min-npmi 0.3 --n-null 100`;
 `uv run python -m graph.analyze compare --other data/graph/skill_graph_vietjobs.json` (thêm `--graph data/graph/skill_graph_dict_notags.json` cho bản không tag).
@@ -223,7 +237,7 @@ Lệnh: `uv run python -m graph.build --snapshots data/vietjobs/it_v1.parquet --
 Làm khi dựng corpus DAPT: so nguyên văn (chữ thường, gộp khoảng trắng) từng câu TEST với dữ liệu khác.
 
 - **Corpus DAPT (VietJobs 567.888 câu):** 397 câu trùng một câu TEST → đã bỏ trước khi train, theo đăng ký.
-- **Nhãn yếu v1/v2/v3 (24.144 câu, dùng để train mọi bản PhoBERT đã báo):** 57 câu trùng, ứng với **30 câu TEST**
+- **Nhãn yếu từ tag, theo luật và self-training (24.144 câu, dùng để train mọi bản PhoBERT đã báo):** 57 câu trùng, ứng với **30 câu TEST**
   (29 câu khác nhau; 33 câu từ VietJobs, 24 từ TopCV). Không có tin TopCV nào chung giữa nhãn yếu và TEST (0/125):
   trùng là do câu chung chung ("Tiếng Anh giao tiếp tốt.", "Mô tả công việc") và một tin tuyển game được đăng lại
   dưới mã tin khác. 8/30 câu có kỹ năng trong nhãn vàng.
@@ -234,7 +248,7 @@ Làm khi dựng corpus DAPT: so nguyên văn (chữ thường, gộp khoảng tr
 | | F1 trên 1.000 câu | F1 trên 970 câu |
 |---|---|---|
 | từ điển | 0,442 | 0,443 |
-| PhoBERT v3 seed 1 / 2 / 3 | 0,616 / 0,618 / 0,617 | 0,619 / 0,621 / 0,620 |
+| PhoBERT self-training seed 1 / 2 / 3 | 0,616 / 0,618 / 0,617 | 0,619 / 0,621 / 0,620 |
 
 Bỏ câu trùng làm F1 *tăng* nhẹ, nên số 0,617 không được đẩy lên nhờ rò rỉ. Số chính thức giữ nguyên trên 1.000
 câu; ghi kiểm tra này vào phần hạn chế. Lô nhãn yếu sau (nếu có) nên lọc câu TEST ngay khi sinh.
@@ -248,9 +262,9 @@ câu; ghi kiểm tra này vào phần hạn chế. Lô nhãn yếu sau (nếu c�
 - Thời gian: 167 phút trên RTX 3050 Ti.
 - Loss MLM trên 500 đoạn giữ lại: **1,951 → 1,217** (perplexity 7,0 → 3,4). Mô hình đã quen văn phong tin tuyển dụng.
 
-**Fine-tune v3 từ mô hình DAPT, chấm `skill_test1` (1.000 câu):**
+**Fine-tune bản self-training từ mô hình DAPT, chấm `skill_test1` (1.000 câu):**
 
-| Seed | dev F1 | TEST P | TEST R | TEST F1 | v3 TEST F1 | ΔF1 (CI95, bootstrap theo tin) |
+| Seed | dev F1 | TEST P | TEST R | TEST F1 | bản self-training TEST F1 | ΔF1 (CI95, bootstrap theo tin) |
 |---|---|---|---|---|---|---|
 | 1 | 0,650 | 0,702 | 0,546 | 0,614 | 0,616 | −0,002 [−0,014; +0,011] |
 | 2 | 0,657 | 0,695 | 0,545 | 0,611 | 0,618 | −0,007 [−0,021; +0,006] |
@@ -259,14 +273,14 @@ câu; ghi kiểm tra này vào phần hạn chế. Lô nhãn yếu sau (nếu c�
 
 Nhận xét:
 
-- Dev F1 trung bình gần như bằng v3 (0,647 so với 0,644).
+- Dev F1 trung bình gần như bằng bản self-training (0,647 so với 0,644).
 - Ghép thêm từ điển (`phobert+dict`) cũng không đổi kết luận: TEST 0,612 / 0,609 / 0,596.
 
-**Kết luận theo quy tắc đã đăng ký:** DAPT **không tốt hơn** v3.
+**Kết luận theo quy tắc đã đăng ký:** DAPT **không tốt hơn** bản self-training.
 
 - Seed 1 và 2: không khác biệt, vì CI chứa 0.
 - Seed 3: kém hơn, vì CI nằm hẳn dưới 0.
-- Image `skill-extractor` giữ PhoBERT v3, không đổi.
+- Image `skill-extractor` giữ PhoBERT self-training, không đổi.
 
 **Đối chiếu dự đoán:** dự đoán tăng +0,005 đến +0,02 là **sai**. Thực tế F1 trung bình giảm 0,010, recall không tăng.
 
@@ -281,38 +295,38 @@ Hạn chế: chỉ thử một cấu hình (1 epoch, lr 5e-5), không dò thêm 
 Lệnh:
 
     uv run python -m ie.dapt corpus && uv run python -m ie.dapt train
-    uv run python -m ie.phobert train --weak v3 --base data/models/phobert-dapt-vietjobs --tag dapt --seed <N>
-    uv run python -m ie.phobert eval --weak v3 --tag dapt --model data/models/wm2-phobert-v3-dapt-s<N> \
+    uv run python -m ie.phobert train --weak selftrain --base data/models/phobert-dapt-vietjobs --tag dapt --seed <N>
+    uv run python -m ie.phobert eval --weak selftrain --tag dapt --model data/models/wm2-phobert-selftrain-dapt-s<N> \
         --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>
-    uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-v3-dapt \
-        --out data/eval/skill_test1_preds_v3_dapt.json --against data/eval/skill_test1_preds_v3.json
+    uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-selftrain-dapt \
+        --out data/eval/skill_test1_preds_selftrain_dapt.json --against data/eval/skill_test1_preds_selftrain.json
 
 ## Cải thiện nhãn yếu WM2 – đăng ký trước (2026-11-19, ghi TRƯỚC khi chạy)
 
-Kết quả DAPT cho thấy nút thắt của WM2 là nhãn yếu bỏ sót: recall nhãn yếu v2 trên dev chỉ 0,48. Thử hai cách,
+Kết quả DAPT cho thấy nút thắt của WM2 là nhãn yếu bỏ sót: recall nhãn yếu theo luật trên dev chỉ 0,48. Thử hai cách,
 mỗi cách đúng **một** cấu hình cố định dưới đây, không dò tham số. Không dùng gì rút ra từ phân tích lỗi TEST.
 
-**Cách 1 – từ điển từ kho tag toàn cục (nhãn yếu v4).**
-- Hiện mỗi tin chỉ được dò bằng tag của chính nó. Bản v4 gom thêm `technical_skills` của **toàn bộ** VietJobs
-  (mọi ngành, 48k tin) và `skill_tags` của TopCV (`topcv_v3`) thành một từ điển chung.
+**Cách 1 – từ điển từ kho tag toàn cục (nhãn yếu kho tag chung).**
+- Hiện mỗi tin chỉ được dò bằng tag của chính nó. Bản kho tag chung gom thêm `technical_skills` của **toàn bộ** VietJobs
+  (mọi ngành, 48k tin) và `skill_tags` của TopCV (`topcv_20261118`) thành một từ điển chung.
 - Lọc tag bằng `clean_tags` như cũ (bỏ kỹ năng mềm, ≤ 5 token), rồi giữ tag xuất hiện ở **≥ 3 tin khác nhau**.
   Bỏ hẳn tin thuộc dev/test (`skill_batch1`, `skill_test1`) khi đếm.
-- v4 = nhãn v3 + span dò bằng từ điển chung ở chỗ v3 còn trống (không đè span cũ), rồi qua luật 0.4 (`refine`).
-- Đo độ nhiễu trên dev như v1/v2: cách gán v2 (tag + từ điển + luật) so với v2 + từ điển chung.
+- Bản kho tag chung = nhãn self-training + span dò bằng từ điển chung ở chỗ bản self-training còn trống (không đè span cũ), rồi qua luật 0.4 (`refine`).
+- Đo độ nhiễu trên dev như hai bộ nhãn từ tag và theo luật: cách gán bản nhãn luật (tag + từ điển + luật) so với bản nhãn luật + từ điển chung.
 
 **Cách 3 – giảm phạt token O khi train.** Nhãn yếu thiếu nhiều kỹ năng, nên token gán O không chắc là O.
-Loss của token nhãn O nhân hệ số **0,5**, token B/I giữ 1. Mọi thứ khác như v3.
+Loss của token nhãn O nhân hệ số **0,5**, token B/I giữ 1. Mọi thứ khác như bản self-training.
 
-**Thí nghiệm:** công thức v3 (lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, chọn epoch theo dev), seed 1–3:
-- A: nhãn v4;
-- B: nhãn v3 + hệ số O 0,5;
-- C: nhãn v4 + hệ số O 0,5.
+**Thí nghiệm:** công thức chuẩn (lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, chọn epoch theo dev), seed 1–3:
+- A: nhãn kho tag chung;
+- B: nhãn self-training + hệ số O 0,5;
+- C: nhãn kho tag chung + hệ số O 0,5.
 
 **Chọn và chấm:**
 - Chọn cấu hình theo F1 `phobert` trung bình 3 seed **trên dev**.
-- Chỉ đem sang TEST nếu cấu hình tốt nhất có dev cao hơn v3 (0,644); nếu không thì ghi "không cải thiện" và dừng,
+- Chỉ đem sang TEST nếu cấu hình tốt nhất có dev cao hơn bản self-training (0,644); nếu không thì ghi "không cải thiện" và dừng,
   không chấm TEST.
-- Cấu hình được chọn chấm `skill_test1` **một lần**, so ghép cặp với v3 cùng seed (bootstrap theo tin, 1.000 lần).
+- Cấu hình được chọn chấm `skill_test1` **một lần**, so ghép cặp với bản self-training cùng seed (bootstrap theo tin, 1.000 lần).
 - Quy tắc kết luận giống DAPT: chỉ viết "tốt hơn" nếu CI95 của ΔF1 nằm hẳn trên 0 ở cả 3 seed. Image
   `skill-extractor` chỉ đổi khi thỏa điều đó.
 
@@ -327,11 +341,11 @@ Loss của token nhãn O nhân hệ số **0,5**, token B/I giữ 1. Mọi thứ
 
 | Nhãn yếu (dev, so với nhãn tay) | P | R | F1 |
 |---|---|---|---|
-| v2: tag + từ điển + luật | 0,812 | 0,476 | 0,600 |
-| v2 + kho tag chung (cách gán của v4) | 0,447 | 0,610 | 0,516 |
+| Bản nhãn luật: tag + từ điển + luật | 0,812 | 0,476 | 0,600 |
+| Bản nhãn luật + kho tag chung (cách gán của bản kho tag chung) | 0,447 | 0,610 | 0,516 |
 
 - Kho tag có 48.194 tin và 12.054 tag; giữ lại 2.934 tag có ở ≥ 3 tin.
-- v4 thêm 18.393 span, nâng số câu có kỹ năng từ 7.350 lên 14.704.
+- Bản kho tag chung thêm 18.393 span, nâng số câu có kỹ năng từ 7.350 lên 14.704.
 - Span thêm nhiều nhất là từ chung: `công nghệ` (850), `CNTT` (611), `hình ảnh` (415), `nhanh` (349), `thương hiệu`, `doanh nghiệp`, `quảng cáo`.
 - Nguyên nhân: tag `technical_skills` của VietJobs do LLM sinh, có nhiều danh từ chung; lọc theo tần suất không loại được, vì từ càng chung càng xuất hiện nhiều.
 
@@ -339,17 +353,17 @@ Loss của token nhãn O nhân hệ số **0,5**, token B/I giữ 1. Mọi thứ
 
 | Cấu hình | Dev F1 | Trung bình |
 |---|---|---|
-| v3 (mốc) | | 0,644 |
-| A: nhãn v4 | 0,543 / 0,530 / 0,535 | 0,536 |
-| B: v3 + hệ số O 0,5 | 0,664 / 0,676 / 0,664 | **0,668 ± 0,007** |
-| C: v4 + hệ số O 0,5 | 0,556 / 0,533 / 0,541 | 0,543 |
+| Bản self-training (mốc) | | 0,644 |
+| A: nhãn kho tag chung | 0,543 / 0,530 / 0,535 | 0,536 |
+| B: bản self-training + hệ số O 0,5 | 0,664 / 0,676 / 0,664 | **0,668 ± 0,007** |
+| C: bản kho tag chung + hệ số O 0,5 | 0,556 / 0,533 / 0,541 | 0,543 |
 
 - A và C: precision dev khoảng 0,46. Mô hình học đúng theo nhãn bẩn.
-- B là cấu hình duy nhất vượt v3 trên dev, nên đem sang TEST theo đăng ký.
+- B là cấu hình duy nhất vượt bản self-training trên dev, nên đem sang TEST theo đăng ký.
 
 **TEST `skill_test1` (1.000 câu), cấu hình B, chấm một lần:**
 
-| Seed | P | R | F1 | v3 F1 | ΔF1 (CI95, bootstrap theo tin) |
+| Seed | P | R | F1 | bản self-training F1 | ΔF1 (CI95, bootstrap theo tin) |
 |---|---|---|---|---|---|
 | 1 | 0,692 | 0,530 | 0,600 | 0,616 | −0,016 [−0,032; +0,002] |
 | 2 | 0,655 | 0,601 | 0,627 | 0,618 | +0,009 [−0,007; +0,025] |
@@ -359,19 +373,19 @@ Loss của token nhãn O nhân hệ số **0,5**, token B/I giữ 1. Mọi thứ
 Ghép thêm từ điển (`phobert+dict`): 0,598 / 0,625 / 0,618.
 
 **Kết luận theo quy tắc đã đăng ký:**
-- B **không khác biệt** so với v3: CI chứa 0 ở cả 3 seed.
-- Image `skill-extractor` giữ PhoBERT v3.
-- Cách 1 (v4) **làm kém đi** rõ rệt trên dev, nên không đem sang TEST.
+- B **không khác biệt** so với bản self-training: CI chứa 0 ở cả 3 seed.
+- Image `skill-extractor` giữ PhoBERT self-training.
+- Cách 1 (bản kho tag chung) **làm kém đi** rõ rệt trên dev, nên không đem sang TEST.
 
 **Đối chiếu dự đoán:**
 - Cách 1: recall nhãn tăng 0,134, vượt khoảng dự đoán 0,03–0,08. Precision giảm 0,365 thay vì ≤ 0,03. Dự đoán **sai**.
 - Cách 3:
-  - Đúng chiều: recall tăng (seed 2–3 khoảng 0,60, so với khoảng 0,53 của v3 và DAPT), precision giảm.
+  - Đúng chiều: recall tăng (seed 2–3 khoảng 0,60, so với khoảng 0,53 của bản self-training và DAPT), precision giảm.
   - F1 không tăng: −0,002, nằm ngoài khoảng 0 đến +0,02 đã dự đoán, nhưng sát mép dưới.
 - Dự đoán chung "không cấu hình nào đạt quy tắc" là đúng.
 
 **Nhận xét:**
-- Dev tăng +0,024 nhưng TEST không tăng. Một phần do chọn epoch theo dev 300 câu, phần lạc quan trên dev ở đây cỡ 0,02–0,05, giống chênh dev–TEST đã thấy ở v3. Ghi vào hạn chế: dev 300 câu quá nhỏ để chọn giữa các cấu hình chênh nhau dưới 0,03.
+- Dev tăng +0,024 nhưng TEST không tăng. Một phần do chọn epoch theo dev 300 câu, phần lạc quan trên dev ở đây cỡ 0,02–0,05, giống chênh dev–TEST đã thấy ở bản self-training. Ghi vào hạn chế: dev 300 câu quá nhỏ để chọn giữa các cấu hình chênh nhau dưới 0,03.
 - Hệ số O chỉ dời điểm cân bằng giữa precision và recall, không thêm thông tin mới. Muốn F1 tăng thật thì cần nhãn có thêm thông tin đúng. Cách khả thi nhất là gán tay thêm câu train (cách 4).
 - Nếu thử lại kho tag chung thì phải lọc theo loại tag (ví dụ chỉ tên riêng Latin), và đăng ký trước như một bản mới.
 
@@ -380,31 +394,31 @@ Repo chưa commit lúc chấm (`ie/weak_global.py`, `--o-weight` trong `ie/phobe
 Lệnh:
 
     uv run python -m ie.weak_global
-    uv run python -m ie.phobert train --weak v4 --seed <N>
-    uv run python -m ie.phobert train --weak v3 --o-weight 0.5 --tag ow05 --seed <N>
-    uv run python -m ie.phobert train --weak v4 --o-weight 0.5 --tag ow05 --seed <N>
-    uv run python -m ie.phobert eval --weak v3 --tag ow05 --model data/models/wm2-phobert-v3-ow05-s<N> \
+    uv run python -m ie.phobert train --weak globaltag --seed <N>
+    uv run python -m ie.phobert train --weak selftrain --o-weight 0.5 --tag ow05 --seed <N>
+    uv run python -m ie.phobert train --weak globaltag --o-weight 0.5 --tag ow05 --seed <N>
+    uv run python -m ie.phobert eval --weak selftrain --tag ow05 --model data/models/wm2-phobert-selftrain-ow05-s<N> \
         --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>
-    uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-v3-ow05 \
-        --out data/eval/skill_test1_preds_v3_ow05.json --against data/eval/skill_test1_preds_v3.json
+    uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-selftrain-ow05 \
+        --out data/eval/skill_test1_preds_selftrain_ow05.json --against data/eval/skill_test1_preds_selftrain.json
 
 ## Nhãn yếu bằng LLM theo guideline – đăng ký trước (2026-11-19, ghi TRƯỚC khi chạy)
 
 Hai thí nghiệm trước cho thấy WM2 bị giới hạn bởi nhãn yếu bỏ sót. Thử cho LLM gán nhãn câu train theo guideline 0.4.
 
 **Ràng buộc:**
-- Chỉ gửi câu **VietJobs** (bộ công khai, Pham Dinh et al., LREC 2026) ra API. Code chặn mọi câu không thuộc `it_v1`; không gửi câu crawl TopCV/ITviec, không gửi câu TEST.
+- Chỉ gửi câu **VietJobs** (bộ công khai, Pham Dinh et al., LREC 2026) ra API. Code chặn mọi câu không thuộc `vietjobs_it`; không gửi câu crawl TopCV/ITviec, không gửi câu TEST.
 - Guideline gửi kèm bỏ phần quy trình, lịch sử, và mọi dòng ví dụ là chuỗi con của một câu `skill_test1` (3 dòng).
 - Nhãn LLM là nhãn yếu: chỉ dùng để train, không bao giờ làm test.
 - Ngân sách: tổng ≤ $3 (key OpenAI có sẵn). Bước thử dừng nếu vượt $0,50.
 
 **Bước thử (dev `skill_batch1`, 300 câu VietJobs):**
 - Gán bằng `gpt-6-luna` và `gpt-6.1-sol`, mỗi lần 20 câu, reasoning effort thấp.
-- Chấm như nhãn yếu v1/v2: seqeval strict so với nhãn tay. Mốc: nhãn yếu v2 có P 0,812 / R 0,476 / F1 0,600.
+- Chấm như nhãn yếu từ tag và theo luật: seqeval strict so với nhãn tay. Mốc: nhãn yếu theo luật có P 0,812 / R 0,476 / F1 0,600.
 - **Đi tiếp** nếu có mô hình đạt F1 ≥ 0,65 trên dev và chi phí ước cho toàn tập train vừa ngân sách; chọn mô hình rẻ nhất đạt mức này. Không mô hình nào đạt thì ghi lại và dừng.
 - Dev đã dùng để chọn cấu hình nhiều lần; ở bước này nó chỉ đo chất lượng nhãn, không chọn tham số mô hình.
 
-**Nếu đi tiếp (đăng ký phần train trước khi chạy, ghi ở mục kết quả bước thử):** gán toàn bộ câu train VietJobs, train PhoBERT theo công thức v3 (3 seed), chọn theo dev, chấm TEST một lần, quy tắc kết luận như DAPT.
+**Nếu đi tiếp (đăng ký phần train trước khi chạy, ghi ở mục kết quả bước thử):** gán toàn bộ câu train VietJobs, train PhoBERT theo công thức chuẩn (3 seed), chọn theo dev, chấm TEST một lần, quy tắc kết luận như DAPT.
 
 **Dự đoán:** Sol đạt F1 0,65–0,75 trên dev; Luna thấp hơn, khoảng 0,55–0,65.
 
@@ -412,7 +426,7 @@ Hai thí nghiệm trước cho thấy WM2 bị giới hạn bởi nhãn yếu b�
 
 | Nhãn trên dev `skill_batch1` (300 câu, so với nhãn tay) | P | R | F1 | Chi phí ước |
 |---|---|---|---|---|
-| Nhãn yếu v2 (tag + từ điển + luật) | 0,812 | 0,476 | 0,600 | 0 |
+| Nhãn yếu theo luật (tag + từ điển + luật) | 0,812 | 0,476 | 0,600 | 0 |
 | `gpt-6-luna`, effort low | 0,864 | 0,834 | **0,849** | $0,006 |
 | `gpt-6.1-sol`, effort low | 0,846 | 0,907 | **0,875** | $0,095 |
 
@@ -423,39 +437,39 @@ Hai thí nghiệm trước cho thấy WM2 bị giới hạn bởi nhãn yếu b�
 - Theo quy tắc đã đăng ký: chọn **Luna** (rẻ nhất đạt mức). Ước cho 20.659 câu train VietJobs: ~$0,45. Sol ước ~$6,5, vượt ngân sách $3.
 
 **Đăng ký trước bước train (ghi TRƯỚC khi gán tập train):**
-- Nhãn `wm2_weak_v5` = file v3, thay nhãn của mọi câu VietJobs (20.659 câu) bằng nhãn Luna. Câu TopCV (3.485 câu) giữ nhãn v3, vì không được gửi ra API.
-- Train PhoBERT công thức v3 (lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, hệ số O 1), seed 1–3, chọn epoch theo dev.
-- Chỉ chấm TEST nếu dev trung bình > 0,644; chấm `skill_test1` một lần, so ghép cặp với v3. Quy tắc kết luận như DAPT: "tốt hơn" chỉ khi CI95 của ΔF1 > 0 ở cả 3 seed; khi đó image `skill-extractor` đổi sang bản v5.
+- Nhãn `wm2_weak_llm` = file bản self-training, thay nhãn của mọi câu VietJobs (20.659 câu) bằng nhãn Luna. Câu TopCV (3.485 câu) giữ nhãn self-training, vì không được gửi ra API.
+- Train PhoBERT công thức chuẩn (lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, hệ số O 1), seed 1–3, chọn epoch theo dev.
+- Chỉ chấm TEST nếu dev trung bình > 0,644; chấm `skill_test1` một lần, so ghép cặp với bản self-training. Quy tắc kết luận như DAPT: "tốt hơn" chỉ khi CI95 của ΔF1 > 0 ở cả 3 seed; khi đó image `skill-extractor` đổi sang bản nhãn LLM.
 - Dự đoán: dev 0,68–0,75; TEST tăng +0,03 đến +0,08, chủ yếu nhờ recall. TEST là câu TopCV, khác nguồn với nhãn LLM, nên phần tăng có thể nhỏ hơn dev.
 
-### Kết quả PhoBERT trên nhãn LLM `wm2_weak_v5` (2026-11-19, chạy và chấm TEST một lần theo đăng ký trên)
+### Kết quả PhoBERT trên nhãn LLM `wm2_weak_llm` (2026-11-19, chạy và chấm TEST một lần theo đăng ký trên)
 
 **Gán nhãn:**
 - `gpt-6-luna` gán 20.659 câu train VietJobs, ~$0,43, khoảng 1 giờ 50 phút.
 - 94 span không dò lại được trên token, đã bỏ.
-- Code chặn 3.485 câu TopCV, giữ nhãn v3.
-- v5 có 8.859 câu có kỹ năng và 21.891 span; v3 có 7.350 câu và 16.282 span.
+- Code chặn 3.485 câu TopCV, giữ nhãn self-training.
+- Bản nhãn LLM có 8.859 câu có kỹ năng và 21.891 span; bản self-training có 7.350 câu và 16.282 span.
 - Tổng chi phí API cả thí nghiệm (thử + gán) ~$0,54, tính từ số token và giá trang tổng hợp. Chưa đối chiếu hóa đơn OpenAI.
 
 | | Dev F1 (seed 1 / 2 / 3) | TB dev | TEST P | TEST R | TEST F1 (seed 1 / 2 / 3) | TB TEST |
 |---|---|---|---|---|---|---|
 | từ điển | | | | | | 0,442 |
-| PhoBERT v3 | | 0,644 | | | 0,616 / 0,618 / 0,617 | 0,617 |
-| **PhoBERT v5 (nhãn LLM)** | 0,794 / 0,801 / 0,796 | **0,797** | 0,725 | 0,734 | 0,729 / 0,727 / 0,734 | **0,730 ± 0,004** |
+| PhoBERT self-training | | 0,644 | | | 0,616 / 0,618 / 0,617 | 0,617 |
+| **PhoBERT nhãn LLM** | 0,794 / 0,801 / 0,796 | **0,797** | 0,725 | 0,734 | 0,729 / 0,727 / 0,734 | **0,730 ± 0,004** |
 
-**So ghép cặp với v3 cùng seed (bootstrap theo tin, 1.000 lần):**
+**So ghép cặp với bản self-training cùng seed (bootstrap theo tin, 1.000 lần):**
 - Seed 1: ΔF1 +0,113 [+0,084; +0,144]
 - Seed 2: ΔF1 +0,109 [+0,080; +0,138]
 - Seed 3: ΔF1 +0,117 [+0,089; +0,147]
 - So với từ điển: +0,284 đến +0,292.
 
 **Kết luận theo quy tắc đã đăng ký:**
-- v5 **tốt hơn** v3: CI95 nằm hẳn trên 0 ở cả 3 seed.
-- Theo quy tắc, image `skill-extractor` đổi sang PhoBERT v5. Việc build lại image chưa làm.
+- Bản nhãn LLM **tốt hơn** bản self-training: CI95 nằm hẳn trên 0 ở cả 3 seed.
+- Theo quy tắc, image `skill-extractor` đổi sang PhoBERT nhãn LLM (seed 1). Đã build lại bản full 0.2.0 ngày 2026-11-19 và chạy thử trên 30 tin cục bộ; xem `models.yaml`.
 
 **Kiểm tra rò rỉ:**
-- 30 câu TEST trùng nguyên văn một câu train, giống lần kiểm tra trước. Ở v5, nhãn train của các câu này do LLM gán theo cùng guideline với nhãn vàng, nên đã chấm lại trên 970 câu còn lại.
-- Kết quả trên 970 câu: v5 0,729 / 0,728 / 0,736 (TB 0,731); v3 TB 0,620. Phần tăng không đến từ câu trùng.
+- 30 câu TEST trùng nguyên văn một câu train, giống lần kiểm tra trước. Ở bản nhãn LLM, nhãn train của các câu này do LLM gán theo cùng guideline với nhãn vàng, nên đã chấm lại trên 970 câu còn lại.
+- Kết quả trên 970 câu: bản nhãn LLM 0,729 / 0,728 / 0,736 (TB 0,731); bản self-training TB 0,620. Phần tăng không đến từ câu trùng.
 
 **Đối chiếu dự đoán:**
 - Dev: dự đoán 0,68–0,75, thực tế 0,797, cao hơn.
@@ -463,7 +477,7 @@ Hai thí nghiệm trước cho thấy WM2 bị giới hạn bởi nhãn yếu b�
 - Phần tăng đến từ cả hai phía:
   - Recall tăng từ 0,53 lên 0,73.
   - Precision tăng từ khoảng 0,70 lên 0,725. Các cách trước đều đổi precision lấy recall; cách này thì không.
-- Chênh dev–TEST còn 0,067 (v3 là 0,027). Phần chênh có thể do nhãn LLM trên câu VietJobs khớp dev (cũng là VietJobs) hơn câu TopCV.
+- Chênh dev–TEST còn 0,067 (bản self-training là 0,027). Phần chênh có thể do nhãn LLM trên câu VietJobs khớp dev (cũng là VietJobs) hơn câu TopCV.
 
 **Ý nghĩa cho báo cáo:**
 - Hai thí nghiệm âm tính trước (DAPT, hệ số O) và thí nghiệm này cùng chỉ ra: chất lượng nhãn train là nút thắt của WM2.
@@ -478,19 +492,19 @@ Hai thí nghiệm trước cho thấy WM2 bị giới hạn bởi nhãn yếu b�
 Lệnh:
 
     uv run python -m ie.llm_label --model gpt-6-luna --bio data/annotation/skill_batch1.bio.jsonl --name dev_gpt-6-luna --eval
-    uv run python -m ie.llm_label --model gpt-6-luna --bio data/weak/wm2_weak_v3.bio.jsonl --name train_luna --budget 1.0
+    uv run python -m ie.llm_label --model gpt-6-luna --bio data/weak/wm2_weak_selftrain.bio.jsonl --name train_luna --budget 1.0
     uv run python -m ie.weak_llm --llm data/llm/train_luna.bio.jsonl
-    uv run python -m ie.phobert train --weak v5 --seed <N>
-    uv run python -m ie.phobert eval --weak v5 --model data/models/wm2-phobert-v5-s<N> \
+    uv run python -m ie.phobert train --weak llm --seed <N>
+    uv run python -m ie.phobert eval --weak llm --model data/models/wm2-phobert-llm-s<N> \
         --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>
-    uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-v5 \
-        --out data/eval/skill_test1_preds_v5.json --against data/eval/skill_test1_preds_v3.json
+    uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-llm \
+        --out data/eval/skill_test1_preds_llm.json --against data/eval/skill_test1_preds_selftrain.json
 
 ## Dữ liệu
 
 > Dữ liệu chính là tin tự crawl (TopCV, ITviec). VietJobs chỉ dùng cho nhãn yếu, từ điển alias và baseline – không dùng làm tập test.
 
-### VietJobs – tập IT `it_v1` (2026-10-07)
+### VietJobs – tập IT `vietjobs_it` (2026-10-07)
 
 - Nguồn: `dinhieufam/VietJobs`, revision `ea140511b77935704e93d21c2973b72f46d48902`, CSV sha256 `85862b06…c49d477`. Trích dẫn Pham Dinh et al., LREC 2026.
 - Lọc `category == công_nghệ_thông_tin_kỹ_thuật_số`: 1.906 / 48.092 tin. Nhóm này có cả vị trí không kỹ thuật (kinh doanh, thiết kế đồ họa).
@@ -511,7 +525,7 @@ Lệnh:
 - Vai trò (quyết định 2026-10-12): **dev set / luyện guideline**, gán đến ~300 câu thì dừng. Tập test WM2 lấy từ tin TopCV tự crawl.
 - **Đã gán xong dev (2026-10-18):** 300 câu đầu (24 tin, 7.301 token), 1 người gán.
   - 129 câu có kỹ năng, 171 câu rỗng (57%); 294 span SKILL.
-  - Gợi ý sẵn bằng từ điển (`annotation/preannotate_dict.py`, `dict-alias-v0`) cho 300 câu chưa gán; 59 câu có gợi ý, người gán giữ nguyên 20 câu, sửa 39 câu.
+  - Gợi ý sẵn bằng từ điển (`annotation/preannotate_dict.py`, `dict-alias`) cho 300 câu chưa gán; 59 câu có gợi ý, người gán giữ nguyên 20 câu, sửa 39 câu.
   - Rà lại toàn bộ sau khi gán: sửa 13 câu sai hoặc lệch quy tắc; 15 span dính khoảng trắng/dấu câu ở mép được cắt tự động khi đổi BIO; 0 span lệch ranh giới token.
   - 9 câu tick "khó / cần bàn" → các quy tắc chốt vào guideline bản 0.3.
   - Lệnh: `uv run python -m annotation.export_bio --project 1 --batch skill_batch1` → `data/annotation/skill_batch1.bio.jsonl`.
@@ -526,15 +540,15 @@ Lệnh:
 
 - F1 khoảng tin cậy 95% (bootstrap 1.000 lần theo câu): [0,440; 0,582] – dev chỉ 300 câu nên khoảng còn rộng.
 - **Cập nhật 2026-11-12 (nhãn dev sửa theo guideline 0.4, 3 câu; còn 290 span):** dict P 0,869 / R 0,365 / F1 0,515, CI95 [0,444; 0,584].
-  PhoBERT (nhãn yếu `wm2_weak_v1`, 3 seed) chấm lại trên cùng dev: F1 0,596 ± 0,022; PhoBERT + từ điển: F1 0,606 ± 0,022.
-  Lệnh: `uv run python -m ie.phobert eval --model data/models/wm2-phobert-s<N> --eval-set skill_batch1 --split dev --seed <N>`; bảng: `uv run python -m experiments.aggregate --task WM2`.
+  PhoBERT (nhãn yếu `wm2_weak_tag`, 3 seed) chấm lại trên cùng dev: F1 0,596 ± 0,022; PhoBERT + từ điển: F1 0,606 ± 0,022.
+  Lệnh: `uv run python -m ie.phobert eval --model data/models/wm2-phobert-tag-s<N> --eval-set skill_batch1 --split dev --seed <N>`; bảng: `uv run python -m experiments.aggregate --task WM2`.
   Các run cũ (nhãn dev bản 0.3) chuyển vào `experiments/runs/superseded-guideline-0.3/`.
 - Lệnh: `uv run python -m ie.baseline_dict --bio data/annotation/skill_batch1.bio.jsonl --eval-set skill_batch1 --split dev` (ghi thêm `experiments/runs/<run_id>.json`)
 - **P trên dev bị đẩy lên:** 257/300 câu được gợi ý sẵn bằng chính từ điển này trước khi người gán sửa, và từ điển dựng từ tag VietJobs cùng nguồn. Số chính thức phải đo trên test `skill_test1` (TopCV, gán không có gợi ý).
 - Bỏ sót chủ yếu: (1) kỹ năng dạng cụm tiếng Việt không có trong từ điển (`vận hành máy CNC`, `vẽ tay`, `thiết kế thumbnail`, `mô hình dữ liệu`, `phân khúc khách hàng`); (2) tên công cụ ngoài top 200 (`Digiwin T100`, `IBM MQ`, `Katalon`, `Mastercam`, `ELK`); (3) một số alias thiếu dù có nhóm (`Agile`, `Scrum` khi viết "Agile/Scrum").
 - Gán thừa: `API` (quá chung theo guideline), `C` đứng riêng, "Agile/Scrum" khớp thành một span thay vì hai, và lệch ranh giới (`React` trong "ReactJS…", `phân tích yêu cầu` khi người gán lấy cụm dài hơn).
 
-### Nhãn yếu cho train PhoBERT `wm2_weak_v1` (2026-11-09)
+### Nhãn yếu cho train PhoBERT `wm2_weak_tag` (2026-11-09)
 
 - Cách gán: tag kỹ năng của chính tin (VietJobs `technical_skills`, TopCV `skill_tags`; bỏ kỹ năng mềm theo từ vựng
   `soft_skills` của VietJobs, bỏ tag > 5 token) cộng từ điển alias, dò khớp dài nhất trên token.
@@ -550,9 +564,9 @@ Lệnh:
 
 - Nhận xét: nhãn yếu bắt được ~40% kỹ năng thật → mô hình train trên đó dễ học thói "bỏ sót" (câu có kỹ năng nhưng bị
   gán toàn O). Hướng xử lý khi train: bỏ bớt câu không có span nào, hoặc chỉ tính loss trên token đã gán B/I.
-- Lệnh: `uv run python -m ie.weak_labels` → `data/weak/wm2_weak_v1.bio.jsonl`
+- Lệnh: `uv run python -m ie.weak_labels` → `data/weak/wm2_weak_tag.bio.jsonl`
 
-### Nhãn yếu v2 `wm2_weak_v2` theo guideline 0.4 (2026-11-12)
+### Nhãn yếu theo luật `wm2_weak_rules` theo guideline 0.4 (2026-11-12)
 
 - Thêm luật `ie/weak_rules.py`, lấy **từ guideline 0.4 và ví dụ trong guideline**, không lấy từ lỗi trên test:
   thêm ~120 khái niệm guideline coi là kỹ năng (wireframe/prototype, cloud/AI đứng riêng, loại kiểm thử, loại quản lý chính thức,
@@ -560,38 +574,38 @@ Lệnh:
   bảo mật chung chung, từ chung, động từ chung + việc); tách span qua "/" trừ tên viết liền (CI/CD, UI/UX…);
   bỏ `AI`/`cloud` khi chỉ là bổ ngữ (`AI solutions`, "giải pháp AI").
 - Cùng 1.960 tin, cùng loại trừ dev/test: 24.144 câu, 6.590 câu có kỹ năng, 14.969 span.
-- Độ nhiễu trên dev (tag + từ điển, so với nhãn tay 0.4): v1 P 0,799 / R 0,410 / F1 0,542 → **v2 P 0,807 / R 0,476 / F1 0,599**.
-- PhoBERT train trên v2 (cùng siêu tham số v1: lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3; chọn epoch theo dev), chấm trên dev:
+- Độ nhiễu trên dev (tag + từ điển, so với nhãn tay 0.4): bản nhãn tag P 0,799 / R 0,410 / F1 0,542 → **bản nhãn luật P 0,807 / R 0,476 / F1 0,599**.
+- PhoBERT train trên bản nhãn luật (cùng siêu tham số với bản nhãn tag: lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3; chọn epoch theo dev), chấm trên dev:
 
 | Phương pháp (dev, 3 seed) | P | R | F1 |
 |---|---|---|---|
-| PhoBERT nhãn yếu v1 | 0,792 | 0,478 | 0,596 ± 0,022 |
-| PhoBERT nhãn yếu v2 | 0,783 | 0,547 | **0,642 ± 0,030** |
-| PhoBERT v2 + từ điển | 0,775 | 0,560 | 0,648 ± 0,029 |
+| PhoBERT nhãn yếu từ tag | 0,792 | 0,478 | 0,596 ± 0,022 |
+| PhoBERT nhãn yếu theo luật | 0,783 | 0,547 | **0,642 ± 0,030** |
+| PhoBERT nhãn luật + từ điển | 0,775 | 0,560 | 0,648 ± 0,029 |
 
-- Chủ yếu tăng recall (+0,07), precision gần như giữ nguyên. Epoch được chọn theo chính dev nên số dev hơi lạc quan cho cả v1 lẫn v2.
-- Lệnh: `uv run python -m ie.weak_labels --version v2`; `uv run python -m ie.phobert train --weak v2 --seed <N>` (model ở `data/models/wm2-phobert-v2-s<N>`).
+- Chủ yếu tăng recall (+0,07), precision gần như giữ nguyên. Epoch được chọn theo chính dev nên số dev hơi lạc quan cho cả bản nhãn tag lẫn bản nhãn luật.
+- Lệnh: `uv run python -m ie.weak_labels --version rules`; `uv run python -m ie.phobert train --weak rules --seed <N>` (model ở `data/models/wm2-phobert-rules-s<N>`).
 
-### Self-training `wm2_weak_v3` (2026-11-12)
+### Self-training `wm2_weak_selftrain` (2026-11-12)
 
-- Ba model v2 (seed 1–3) đoán lại chính tập train; span nào **cả ba cùng đoán**, không chồng span nhãn yếu sẵn có
+- Ba model nhãn luật (seed 1–3) đoán lại chính tập train; span nào **cả ba cùng đoán**, không chồng span nhãn yếu sẵn có
   và không bị luật 0.4 loại thì được thêm vào nhãn. Không bỏ span nhãn yếu nào (chỉ nhằm giảm bỏ sót).
 - Thêm 1.307 span → 16.282 span, 7.350/24.144 câu có kỹ năng. Span thêm nhiều nhất: `UX`, `thiết kế game`,
   `automation test`, `Zabbix`, `MLOps`, `ISO 27001`, `LangChain`, `ISTQB`, `Cypress` (phần lớn là tên hiếm nhãn yếu bỏ sót).
 
 | Phương pháp (dev, 3 seed) | P | R | F1 |
 |---|---|---|---|
-| PhoBERT v1 | 0,792 | 0,478 | 0,596 ± 0,022 |
-| PhoBERT v2 | 0,783 | 0,547 | 0,642 ± 0,030 |
-| PhoBERT v3 (self-train) | 0,813 | 0,533 | 0,644 ± 0,006 |
-| PhoBERT v3 + từ điển | 0,801 | 0,546 | **0,649 ± 0,006** |
+| PhoBERT nhãn tag | 0,792 | 0,478 | 0,596 ± 0,022 |
+| PhoBERT nhãn luật | 0,783 | 0,547 | 0,642 ± 0,030 |
+| PhoBERT self-training | 0,813 | 0,533 | 0,644 ± 0,006 |
+| PhoBERT self-training + từ điển | 0,801 | 0,546 | **0,649 ± 0,006** |
 
-- F1 v3 ≈ v2 (chênh 0,002, nhỏ hơn độ lệch giữa các seed) nhưng **ổn định hơn hẳn**: std 0,006 so với 0,030,
+- F1 bản self-training ≈ bản nhãn luật (chênh 0,002, nhỏ hơn độ lệch giữa các seed) nhưng **ổn định hơn hẳn**: std 0,006 so với 0,030,
   và precision cao hơn (0,813 so với 0,783) đổi lấy recall thấp hơn chút. Self-training ở đây chủ yếu làm
   mô hình nhất quán giữa các seed, không mở rộng thêm độ phủ.
-- Lệnh: `uv run python -m ie.self_train --src v2 --dst v3 --models wm2-phobert-v2-s1 wm2-phobert-v2-s2 wm2-phobert-v2-s3`;
-  `uv run python -m ie.phobert train --weak v3 --seed <N>`.
-- **Chưa chấm trên test** – chờ chốt bản cuối (v2 hay v3) rồi chấm một lần.
+- Lệnh: `uv run python -m ie.self_train --src rules --dst selftrain --models wm2-phobert-rules-s1 wm2-phobert-rules-s2 wm2-phobert-rules-s3`;
+  `uv run python -m ie.phobert train --weak selftrain --seed <N>`.
+- **Chưa chấm trên test** – chờ chốt bản cuối (nhãn luật hay self-training) rồi chấm một lần.
 
 ## WM1 – thu thập và phát hiện tin trùng
 
@@ -599,7 +613,7 @@ Lệnh:
 
 - `crawler/dedup.py`: baseline khóa `tiêu đề + công ty` (chuẩn hóa, cắt đuôi quảng cáo "tuyển gấp", "lương upto…")
   và MinHash LSH trên shingle 3 từ của `title + description + requirements_text` (128 permutation).
-- Chạy thử trên snapshot `topcv_v1` (304 tin, **một nguồn** nên chỉ có tin đăng lại, chưa có tin trùng liên trang):
+- Chạy thử trên snapshot `topcv_20261012` (304 tin, **một nguồn** nên chỉ có tin đăng lại, chưa có tin trùng liên trang):
 
 | Ngưỡng Jaccard | Số cặp ứng viên |
 |---|---|
@@ -612,7 +626,7 @@ Lệnh:
   tức **cùng vị trí nhưng mô tả viết lại**, đúng loại tin dedup cần bắt mà ngưỡng 0,5 bỏ sót.
 - **Kết luận cho tập gán nhãn:** 304 tin một nguồn là quá ít (≈ 6 cặp ở ngưỡng 0,2). Phải crawl ITviec
   và crawl thêm TopCV trước khi rút 300 cặp; ngưỡng rút ứng viên nên hạ về **0,2** và lấy theo tầng.
-- Lệnh: `uv run python -m crawler.dedup --snapshots data/crawl/topcv/topcv_v1.parquet --out data/eval/dedup_topcv_v1.csv`
+- Lệnh: `uv run python -m crawler.dedup --snapshots data/crawl/topcv/topcv_20261012.parquet --out data/eval/dedup_topcv_20261012.csv`
 
 ### Crawl TopCV đợt 2 và chuẩn hóa tên công ty (2026-11-15)
 
@@ -635,12 +649,12 @@ mỗi ngày chỉ nên tính khoảng **25–60 tin TopCV**, không thể dựa 
 tên đầy đủ ("Công ty TNHH LG CNS Việt Nam") còn ITviec ghi tên thương hiệu ("LG CNS Việt Nam").
 Công ty chung giữa hai nguồn: **4 → 9**.
 
-**Snapshot `topcv_v2`**: 331 tin, ids_sha256 `6f5e64cddb531131c1f863a800cfb75ccace20a055669adb6f60e4e0866cff7b`,
-`date_posted` 2026-08-17 → 2026-10-24. (ITviec `itviec_v1`: 536 tin, 2026-09-24 → 2026-11-12.)
+**Snapshot `topcv_20261115`**: 331 tin, ids_sha256 `6f5e64cddb531131c1f863a800cfb75ccace20a055669adb6f60e4e0866cff7b`,
+`date_posted` 2026-08-17 → 2026-10-24. (ITviec `itviec_20261113`: 536 tin, 2026-09-24 → 2026-11-12.)
 
 ### Cặp ứng viên trên hai nguồn (2026-11-15)
 
-`uv run python -m crawler.dedup --snapshots data/crawl/topcv/topcv_v2.parquet data/crawl/itviec-jobs/itviec_v1.parquet --threshold 0.2 --out data/eval/dedup_pairs_v2.csv`
+`uv run python -m crawler.dedup --snapshots data/crawl/topcv/topcv_20261115.parquet data/crawl/itviec-jobs/itviec_20261113.parquet --threshold 0.2 --out data/eval/dedup_pairs_cross.csv`
 
 867 tin (itviec 536, topcv 331) → **371 cặp ứng viên**: baseline 5, MinHash ≥ 0,2 371, **khác nguồn chỉ 4**.
 Jaccard: min 0,203, trung vị 0,328, max 1,000. Cùng công ty 366/371.
@@ -663,7 +677,7 @@ mô tả"**, chứ không phải chuyện tìm tin giống nhau nói chung. Đó
 
 ### Tập 300 cặp để gán nhãn (2026-11-15)
 
-`uv run python -m annotation.sample_dedup_pairs --snapshots data/crawl/topcv/topcv_v2.parquet data/crawl/itviec-jobs/itviec_v1.parquet --n 300`
+`uv run python -m annotation.sample_dedup_pairs --snapshots data/crawl/topcv/topcv_20261115.parquet data/crawl/itviec-jobs/itviec_20261113.parquet --n 300`
 
 Số cặp có thể rút, theo tầng:
 
@@ -734,10 +748,10 @@ gộp). Muốn chọn tham số cho hai việc này mà không chạm 300 cặp 
 Lệnh: `uv run python -m crawler.eval_dedup --from-ls 10` (lưu nhãn vào `data/annotation/dedup_batch1.labels.jsonl`),
 sau đó `uv run python -m crawler.eval_dedup`.
 
-### Đăng ký trước: dedup v2 – cắt khung công ty + so tiêu đề mềm (2026-11-18, ghi TRƯỚC khi chạy)
+### Đăng ký trước: dedup cắt khung – cắt khung công ty + so tiêu đề mềm (2026-11-18, ghi TRƯỚC khi chạy)
 
-Mục này viết trước khi chạy bất kỳ phép đo nào của v2. Mọi tham số chọn theo lý lẽ, **không chỉnh theo điểm
-trên 300 cặp**. Chạy đúng một lần; kết quả ra sao báo vậy, kể cả khi kém hơn v1. Muốn chỉnh tiếp thì phải
+Mục này viết trước khi chạy bất kỳ phép đo nào của bản cắt khung. Mọi tham số chọn theo lý lẽ, **không chỉnh theo điểm
+trên 300 cặp**. Chạy đúng một lần; kết quả ra sao báo vậy, kể cả khi kém hơn bản MinHash. Muốn chỉnh tiếp thì phải
 gán lô dev riêng.
 
 1. **Cắt khung công ty** (sửa báo nhầm): nhóm tin theo (nguồn, `norm_company`). Nhóm có **≥ 3 tin** thì bỏ
@@ -747,22 +761,22 @@ gán lô dev riêng.
    (`on-site`, `onsite`, `remote`, `hybrid`, `wfh`, `work from home`, `hà nội`, `ha noi`, `hanoi`, `hn`,
    `hồ chí minh`, `ho chi minh`, `hcm`, `tp hcm`, `tphcm`, `sài gòn`, `saigon`, `đà nẵng`, `da nang`,
    `danang`, `việt nam`, `vietnam`, `tại`). **Giữ cấp bậc**: guideline coi Junior và Senior là khác tin.
-3. **Hệ chính v2** = baseline mềm ∪ MinHash cắt khung ≥ 0,5. So với hệ chính v1 (baseline ∪ MinHash ≥ 0,5
+3. **Hệ chính (cắt khung)** = baseline mềm ∪ MinHash cắt khung ≥ 0,5. So với hệ MinHash (baseline ∪ MinHash ≥ 0,5
    = F1 0,522) bằng bootstrap ghép cặp ΔF1, 2.000 lần, theo cặp. Báo cả từng thành phần riêng lẻ.
 
-### Kết quả dedup v2 – chạy một lần theo đăng ký trước (2026-11-18)
+### Kết quả dedup cắt khung – chạy một lần theo đăng ký trước (2026-11-18)
 
 Cùng 300 cặp, cùng nhãn, tham số đúng như mục đăng ký ở trên, không chỉnh gì sau khi xem số.
 
 | Hệ | P | R | F1 | F1 CI95 | P / R / F1 có trọng số |
 |---|---|---|---|---|---|
-| v1: baseline ∪ MinHash ≥ 0,5 | 0,387 | 0,800 | 0,522 | [0,324; 0,679] | 0,387 / 0,523 / 0,445 |
+| MinHash: baseline ∪ MinHash ≥ 0,5 | 0,387 | 0,800 | 0,522 | [0,324; 0,679] | 0,387 / 0,523 / 0,445 |
 | baseline mềm | 1,000 | 0,400 | 0,571 | [0,250; 0,800] | 1,000 / 0,474 / 0,643 |
 | MinHash cắt khung ≥ 0,5 | 0,533 | 0,533 | 0,533 | [0,276; 0,732] | 0,484 / 0,348 / 0,405 |
-| **v2: baseline mềm ∪ MinHash cắt khung ≥ 0,5** | **0,611** | 0,733 | **0,667** | [0,444; 0,829] | 0,650 / 0,692 / 0,671 |
+| **Cắt khung: baseline mềm ∪ MinHash cắt khung ≥ 0,5** | **0,611** | 0,733 | **0,667** | [0,444; 0,829] | 0,650 / 0,692 / 0,671 |
 
-**ΔF1 v2 − v1 = +0,145, CI95 [−0,020; +0,304]**, p(Δ ≤ 0) = 0,044. Khoảng tin cậy hai phía vẫn chứa 0
-nên **chưa đủ để nói chắc v2 hơn v1**; chiều tăng thì nhất quán (ước lượng có trọng số 0,445 → 0,671).
+**ΔF1 cắt khung − MinHash = +0,145, CI95 [−0,020; +0,304]**, p(Δ ≤ 0) = 0,044. Khoảng tin cậy hai phía vẫn chứa 0
+nên **chưa đủ để nói chắc bản cắt khung hơn bản MinHash**; chiều tăng thì nhất quán (ước lượng có trọng số 0,445 → 0,671).
 
 - **Báo nhầm 19 → 7.** Cắt khung công ty làm đúng việc của nó ở phần lớn cặp. 6/7 cặp còn lại vẫn là
   hai vị trí của cùng công ty, khác nhau ở mảng kỹ thuật (Android/iOS, Java/PHP) hoặc cấp bậc, nằm trong
@@ -804,7 +818,7 @@ Lệnh: `uv run python -m annotation.kappa_dedup score --from-ls 11`.
 
 Người 1 gán lại **mù** 47 cặp trên project riêng (Label Studio 12, không thấy nhãn cũ): mọi cặp đã gán
 "trùng", mọi cặp tick "khó", mọi cặp khác trang. Lô chọn theo nhãn và nguồn, không theo dự đoán của hệ.
-253 cặp còn lại giữ nhãn 0.1. File nhãn: `dedup_batch1.labels_v02.jsonl`.
+253 cặp còn lại giữ nhãn 0.1. File nhãn: `dedup_batch1.relabeled.jsonl`.
 
 **Đổi 4 nhãn, số cặp trùng 15 → 13 (5 khác trang):**
 
@@ -822,15 +836,15 @@ Ba cặp đầu chính là ba trong bốn cặp lệch κ, nay theo người 2. 
 | Hệ | Nhãn 0.1: P / R / F1 | Nhãn 0.2: P / R / F1 | F1 CI95 (0.2) | F1 có trọng số 0.1 → 0.2 |
 |---|---|---|---|---|
 | baseline title+company | 1,000 / 0,333 / 0,500 | 1,000 / 0,385 / 0,556 | [0,200; 0,800] | → 0,385 |
-| v1: baseline ∪ MinHash ≥ 0,5 | 0,387 / 0,800 / 0,522 | 0,323 / 0,769 / 0,455 | [0,250; 0,621] | 0,445 → 0,385 |
-| v2: baseline mềm ∪ MinHash cắt khung ≥ 0,5 | 0,611 / 0,733 / 0,667 | 0,556 / 0,769 / 0,645 | [0,417; 0,815] | 0,671 → 0,724 |
+| MinHash: baseline ∪ MinHash ≥ 0,5 | 0,387 / 0,800 / 0,522 | 0,323 / 0,769 / 0,455 | [0,250; 0,621] | 0,445 → 0,385 |
+| Cắt khung: baseline mềm ∪ MinHash cắt khung ≥ 0,5 | 0,611 / 0,733 / 0,667 | 0,556 / 0,769 / 0,645 | [0,417; 0,815] | 0,671 → 0,724 |
 
-- **ΔF1 v2 − v1 = +0,191, CI95 [+0,014; +0,369]**, p(Δ ≤ 0) = 0,018 (nhãn 0.1: +0,145, CI [−0,020; +0,304]).
+- **ΔF1 cắt khung − MinHash = +0,191, CI95 [+0,014; +0,369]**, p(Δ ≤ 0) = 0,018 (nhãn 0.1: +0,145, CI [−0,020; +0,304]).
   Theo nhãn 0.2 khoảng tin cậy không còn chứa 0. Cần đọc cẩn thận: chênh lệch chủ yếu đến từ việc đổi nhãn
-  cặp 95 và 64 (cả v1 và v2 đều báo trùng, nay thành báo nhầm, v1 mất nhiều hơn vì P thấp hơn), không phải
+  cặp 95 và 64 (cả bản MinHash và bản cắt khung đều báo trùng, nay thành báo nhầm, bản MinHash mất nhiều hơn vì P thấp hơn), không phải
   từ thay đổi của hệ. Nên báo cả hai bộ số, không chọn bộ đẹp hơn.
-- Khác trang: v2 bắt **5/5, không báo nhầm** (cặp LG CNS trước là báo nhầm, nay là trùng).
-- Cùng trang: v2 P 0,385 R 0,625. 8 báo nhầm, phần lớn là MB Bank: hai tin **mô tả gần như y hệt**
+- Khác trang: bản cắt khung bắt **5/5, không báo nhầm** (cặp LG CNS trước là báo nhầm, nay là trùng).
+- Cùng trang: bản cắt khung P 0,385 R 0,625. 8 báo nhầm, phần lớn là MB Bank: hai tin **mô tả gần như y hệt**
   (J_cắt 0,95–0,98) nhưng khác cấp bậc hoặc khác tiêu đề. Đây là giới hạn của so khớp văn bản: chỗ khác
   nhau nằm ở vài chữ trong tiêu đề.
 - **Một điểm cần ghi:** cặp 95 có J_cắt = 0,98, tức phần nhiệm vụ gần như trùng khít, nhưng nhãn 0.2 là
@@ -838,7 +852,7 @@ Ba cặp đầu chính là ba trong bốn cặp lệch κ, nay theo người 2. 
   chấm; ghi lại như một chỗ guideline chưa rõ (khi mô tả giống mà tiêu đề nói hai vai trò khác nhau).
 
 Lệnh: `uv run python -m annotation.kappa_dedup merge --from-ls 12`,
-`uv run python -m crawler.eval_dedup --labels data/annotation/dedup_batch1.labels_v02.jsonl`.
+`uv run python -m crawler.eval_dedup --labels data/annotation/dedup_batch1.relabeled.jsonl`.
 
 ### Crawl nhắm đúng đích theo trang công ty (chuẩn bị, 2026-11-15)
 
@@ -997,9 +1011,9 @@ Hai điểm yếu đã thấy của baseline, giữ lại cho phần phân tích
 - "Công ty không có **văn hóa** OT thường xuyên" → nhận thêm `culture_fun` sai, vì "văn hóa" nằm trong
   từ điển khía cạnh.
 
-### Nhãn yếu v1 (2026-11-15)
+### Nhãn yếu từ điểm sao (2026-11-15)
 
-`uv run python -m absa.weak_labels` – `absa/weak_labels.py`, phiên bản `aspect-dict+stars-v1`.
+`uv run python -m absa.weak_labels` – `absa/weak_labels.py`, phiên bản `aspect-dict+stars`.
 
 Quy tắc: khía cạnh lấy từ từ điển; **cực tính lấy từ điểm sao theo khía cạnh của review** (≥4 → tích cực,
 ≤2 → tiêu cực), sao = 3 hoặc khía cạnh không có sao thì theo phần review (`liked` → tích cực,
@@ -1055,7 +1069,7 @@ positive 29, negative 26, neutral 6. Hạn mức lúc rút mẫu đã làm đư�
 | Hệ | Khía cạnh P | R | F1 | Cực macro-F1 (trên khía cạnh trùng) | Tổng hợp macro-F1 3 lớp |
 |---|---|---|---|---|---|
 | Baseline từ điển | 0,750 | 0,738 | **0,744** | 0,380 | **0,280** |
-| Nhãn yếu `aspect-dict+stars-v1` | 0,750 | 0,738 | 0,744 | 0,527 | **0,393** |
+| Nhãn yếu `aspect-dict+stars` | 0,750 | 0,738 | 0,744 | 0,527 | **0,393** |
 
 Khía cạnh giống nhau vì nhãn yếu dùng lại `match_aspects` của từ điển; chỉ phần cực là khác. F1 theo
 lớp của baseline: positive 0,526 – negative **0,194** – neutral 0,121. Nhãn yếu: positive 0,603 –
@@ -1106,7 +1120,7 @@ macro-F1 chỉ trên positive/negative, kèm support từng lớp, để số c�
 
 Việc tiếp: gán lại 10 câu + 5 nhãn `neutral` theo guideline 0.2 → chạy lại `export_absa` để có nhãn
 vàng dev chốt → bổ sung từ điển các thuật ngữ ở bảng 2c (career path, performance review, pantry, nhà
-xe, thang máy, hybrid…) và luật "đề nghị = tiêu cực" cho `absa/lexicon.py` v2, báo cáo cả v1 và v2 →
+xe, thang máy, hybrid…) và luật "đề nghị = tiêu cực" cho `absa/lexicon.py` bản mở rộng, báo cáo cả bản cơ bản và bản mở rộng →
 rút lô đầy đủ 942 câu. Bốp gán ~80 câu để đo κ.
 
 ### Nhãn vàng dev sau khi gán lại theo 0.2.1 (2026-11-15)
@@ -1119,7 +1133,7 @@ Gán lại 16 câu theo guideline 0.2.1 rồi export lại. Nhãn vàng dev ch�
 | Hệ | Khía cạnh P | R | F1 | Cực macro-F1 | Theo ô, 3 lớp | Theo ô, chỉ pos/neg |
 |---|---|---|---|---|---|---|
 | Baseline từ điển | 0,867 | 0,754 | **0,806** | 0,325 | 0,250 | **0,375** |
-| Nhãn yếu `aspect-dict+stars-v1` | 0,867 | 0,754 | 0,806 | 0,517 | 0,416 | **0,624** |
+| Nhãn yếu `aspect-dict+stars` | 0,867 | 0,754 | 0,806 | 0,517 | 0,416 | **0,624** |
 
 So với nhãn vàng đợt đầu: F1 khía cạnh **0,744 → 0,806**, chủ yếu do precision lên 0,750 → 0,867. Nghĩa
 là phần lớn khía cạnh trước bị tính là "từ điển bắt sai" thật ra **từ điển đúng, nhãn vàng thiếu** –
@@ -1134,8 +1148,8 @@ rõ: 0,624 so với 0,375 (macro 2 lớp).
 `neutral` còn **1/69** sau khi áp ba cổng ở mục 2d. Macro-F1 3 lớp vì thế bị lớp một mẫu kéo xuống; từ
 đây báo cáo cả hai số, 3 lớp để đối chiếu với contract và 2 lớp để đọc.
 
-Việc tiếp: sửa lỗi parser ITviec (3/144 review lẫn `liked`/`improvement`) → nâng từ điển lên v2 (thuật
-ngữ bảng 2c + luật "đề nghị = tiêu cực"), báo cáo cả v1 và v2 trên đúng 57 câu này → rút lô đầy đủ 942
+Việc tiếp: sửa lỗi parser ITviec (3/144 review lẫn `liked`/`improvement`) → nâng từ điển lên bản mở rộng (thuật
+ngữ bảng 2c + luật "đề nghị = tiêu cực"), báo cáo cả bản cơ bản và bản mở rộng trên đúng 57 câu này → rút lô đầy đủ 942
 câu theo hạn mức, Bốp gán ~80 câu đo κ. Cờ "khó / cần bàn" của lô thử chưa bỏ tick (11 câu) nhưng các
 câu đó đã xử lý xong; lô sau đọc cờ thì nhớ mốc này.
 
@@ -1177,7 +1191,7 @@ tách đôi – nghĩa là bản sửa này trực tiếp xử lý 4 trong số 
 | "Được cung cấp đầy đủ trang thiết bị, có hợp đồng giống freelancer Không có OT vào các ngày…" | lương + OT |
 | "5h30 là tan làm mà toàn thấy OT đến 7h mới về CSVC thấy hơi …" | OT + văn phòng |
 
-### Từ điển v2 (2026-11-15)
+### Từ điển mở rộng (2026-11-15)
 
 Hai thay đổi, cả hai rút từ phân tích lỗi trên tập dev 53 câu:
 
@@ -1195,20 +1209,20 @@ Chấm trên tập dev 53 câu, 59 cặp (`absa/eval_dev.py`):
 
 | Hệ | Khía cạnh F1 | Theo ô, 3 lớp | Theo ô, chỉ pos/neg | Recall `negative` |
 |---|---|---|---|---|
-| v1 từ điển (số cũ, trên 57 câu) | 0,806 | 0,250 | 0,375 | 0,121 |
-| v2 từ điển, tắt luật đề nghị | 0,933 | 0,263 | 0,395 | 0,161 |
-| **v2 từ điển + luật đề nghị** | **0,933** | 0,404 | **0,607** | **0,645** |
-| Nhãn yếu `aspect-dict+stars-v1` | 0,933 | 0,437 | 0,655 | 0,581 |
+| từ điển cơ bản (số cũ, trên 57 câu) | 0,806 | 0,250 | 0,375 | 0,121 |
+| từ điển mở rộng, tắt luật đề nghị | 0,933 | 0,263 | 0,395 | 0,161 |
+| **từ điển mở rộng + luật đề nghị** | **0,933** | 0,404 | **0,607** | **0,645** |
+| Nhãn yếu `aspect-dict+stars` | 0,933 | 0,437 | 0,655 | 0,581 |
 
 Luật đề nghị là thay đổi có giá trị nhất: recall `negative` **0,161 → 0,645** (gấp 4), macro 2 lớp
 0,395 → 0,607. *(Sửa sau phản biện 2026-11-17: đây là số **dev 53 câu**, chính là các câu đã dùng
-để viết luật, nên lạc quan. Trên TEST đóng băng: 0,141 → 0,315 – vẫn gấp đôi, nhưng không phải gấp 4.)* Từ điển v2 giờ bắt câu tiêu cực **tốt hơn** nhãn yếu (0,645 so với 0,581), còn nhãn yếu
+để viết luật, nên lạc quan. Trên TEST đóng băng: 0,141 → 0,315 – vẫn gấp đôi, nhưng không phải gấp 4.)* Từ điển mở rộng giờ bắt câu tiêu cực **tốt hơn** nhãn yếu (0,645 so với 0,581), còn nhãn yếu
 vẫn hơn ở tổng thể vì đọc được điểm sao.
 
-**Phải ghi rõ trong báo cáo:** từ điển v2 được chỉnh *trên tập dev này*, nên 0,933 và 0,607 là số dev,
+**Phải ghi rõ trong báo cáo:** từ điển mở rộng được chỉnh *trên tập dev này*, nên 0,933 và 0,607 là số dev,
 không phải số test. Số test chỉ được chấm một lần trên `absa_test1`, sau khi gán xong.
 
-Lỗi đã biết của v2: "nên" trong tiếng Việt vừa là "should" vừa là "vì thế" ("việc nhiều **nên** phải
+Lỗi đã biết của bản mở rộng: "nên" trong tiếng Việt vừa là "should" vừa là "vì thế" ("việc nhiều **nên** phải
 OT"), nên luật đề nghị sẽ bắt sai một số câu mô tả. Giữ vì trên dev đúng nhiều hơn sai; ghi vào phần
 phân tích lỗi.
 
@@ -1261,18 +1275,18 @@ không có nhóm này thì không đo được từ điển gán thừa bao nhi�
 |---|---|---|---|---|
 | từ điển, không luật đề nghị | 0.731 | 0.338 | 0.444 | 0.191 |
 | từ điển + luật đề nghị | 0.731 | 0.374 | 0.505 | 0.412 |
-| nhãn yếu `aspect-dict+stars-v1` | 0.731 | 0.357 | 0.536 | 0.353 |
+| nhãn yếu `aspect-dict+stars` | 0.731 | 0.357 | 0.536 | 0.353 |
 
 Luật đề nghị vẫn đáng giữ: recall `negative` 0.191 → 0.412 (gấp hơn hai lần), macro pos/neg 0.444 → 0.505.
 Nhưng mức tăng nhỏ hơn trên dev nhiều (dev: 0.161 → 0.645).
 
 #### Dev cao hơn test 0.20 F1 – vì dev đã bị dùng để sửa từ điển
 
-Khía cạnh F1: **dev 0.933, test 0.731**. Chênh lệch này không phải nhiễu. Từ điển v2 (2026-11-15)
+Khía cạnh F1: **dev 0.933, test 0.731**. Chênh lệch này không phải nhiễu. Từ điển mở rộng (2026-11-15)
 thêm 50 cụm lấy từ chính 11 câu bị tick "khó" của lô thử 60 câu, nên dev đo lại từ điển trên đúng dữ
 liệu đã dùng để viết nó. 0.731 là con số trên test **lúc đó**, 0.933 chỉ dùng để so trước/sau khi sửa từ điển. *(Sửa sau phản
 biện 2026-11-17: cùng đại lượng sau đó còn đổi 0,764 → 0,770 → 0,743 → 0,753 vì sửa từ điển, sửa
-guideline và mở rộng TEST. **Số báo cáo là 0,753**: từ điển `dict-v3` trên TEST đóng băng 348 câu.)*
+guideline và mở rộng TEST. **Số báo cáo là 0,753**: từ điển `absa-dict` trên TEST đóng băng 348 câu.)*
 Ghi vào phần hạn chế của báo cáo: dev 53 câu quá nhỏ để vừa chỉnh vừa đo.
 
 #### Lỗi guideline phát hiện khi gán TEST: chữ "môi trường"
@@ -1305,7 +1319,7 @@ Sau khi sửa – TEST 292 câu / 333 cặp, DEV 57 câu / 73 cặp:
 |---|---|---|---|---|---|
 | từ điển, không luật đề nghị | 0.770 | 0.470 | 0.191 | 0.945 | 0.421 |
 | từ điển + luật đề nghị | 0.770 | 0.532 | 0.412 | 0.945 | 0.616 |
-| nhãn yếu `aspect-dict+stars-v1` | 0.770 | 0.557 | 0.353 | 0.945 | 0.649 |
+| nhãn yếu `aspect-dict+stars` | 0.770 | 0.557 | 0.353 | 0.945 | 0.649 |
 
 #### Từ điển bỏ sót ở đâu (phân tích lỗi, không dùng để sửa từ điển)
 
@@ -1362,7 +1376,7 @@ Lô `absa_test2` đã gán xong cùng ngày; kết quả ở mục "TEST WM3 đ�
 
 #### Mở rộng dev lên 207 câu (`absa_dev2`, 150 câu)
 
-Dev hiện có 57 câu và đã bị dùng để viết từ điển v2, nên vừa nhỏ vừa không còn trung lập. Phân tích
+Dev hiện có 57 câu và đã bị dùng để viết từ điển mở rộng, nên vừa nhỏ vừa không còn trung lập. Phân tích
 lỗi ở trên chỉ ra mấy hướng sửa cụ thể (chê bằng "chưa/không + từ tốt", "có thể … hơn", câu kể về sếp
 và đồng nghiệp), nhưng 57 câu thì sửa gì cũng không biết là thật hay trùng hợp, mà TEST thì không được
 chạm. Nên rút thêm 150 câu **từ đúng 45 review đã ở dev** (`--only-reviews-of`), để không review nào
@@ -1414,7 +1428,7 @@ phải lỗi cách rút mẫu, và không còn câu nào để rút thêm.
 |---|---|---|---|---|
 | từ điển, không luật đề nghị | 0.743 | 0.329 | 0.434 | 0.141 |
 | **từ điển + luật đề nghị** | 0.743 | **0.366** | 0.496 | **0.315** |
-| nhãn yếu `aspect-dict+stars-v1` | 0.743 | 0.343 | **0.515** | 0.261 |
+| nhãn yếu `aspect-dict+stars` | 0.743 | 0.343 | **0.515** | 0.261 |
 
 Đây là con số nền mà PhoBERT phải vượt.
 
@@ -1447,14 +1461,14 @@ nói giảm ("chưa quá rõ ràng", "có thể tối ưu hơn", "lương mặt 
 được loại dùng "nên/cần/mong", không bắt được loại "chưa/không + từ tốt" và "có thể … hơn".
 Thử sửa trên dev 207 câu, **không chạm TEST**.
 
-### Dev 200 câu và từ điển v3 (2026-11-17)
+### Dev 200 câu và từ điển đủ luật (2026-11-17)
 
 Gán xong 150 câu `absa_dev2` (project 8). Dev giờ có **200 câu, 207 cặp (khía cạnh, cực)**, gộp từ hai
 file nhãn `absa_trial.absa.jsonl` và `absa_dev2.absa.jsonl`.
 
-Điều đáng chú ý nhất: riêng 150 câu mới, từ điển v2 được **0.738** F1 khía cạnh. TEST được 0.743. Hai
+Điều đáng chú ý nhất: riêng 150 câu mới, từ điển mở rộng được **0.738** F1 khía cạnh. TEST được 0.743. Hai
 con số gần bằng nhau. Trong khi đó 57 câu dev cũ cho tới 0.945. Nghĩa là dev cũ không đo được gì nữa
-vì từ điển v2 vốn viết ra từ chính nó, còn dev mới thì chưa bị dùng để chỉnh gì nên nó đo thật.
+vì từ điển mở rộng vốn viết ra từ chính nó, còn dev mới thì chưa bị dùng để chỉnh gì nên nó đo thật.
 
 **Một nhãn sai đã sửa:** câu "Unfair performance review." gán `management_care`=`positive`. "Unfair"
 là chê. Sửa thành `negative` bằng `annotation/relabel_absa.py`.
@@ -1503,40 +1517,40 @@ Hai cột cuối đọc như sau. **R** = trong các cặp nhãn vàng là chê,
 
 | Luật bật | Khía cạnh F1 | Theo ô 3 lớp | Chỉ pos/neg | R chê | P chê |
 |---|---|---|---|---|---|
-| v1 – chỉ đếm từ cảm xúc | 0.833 | 0.294 | 0.433 | 0.212 | 0.824 |
+| Cơ bản – chỉ đếm từ cảm xúc | 0.833 | 0.294 | 0.433 | 0.212 | 0.824 |
 | + luật đề nghị | 0.833 | 0.400 | 0.588 | 0.621 | 0.695 |
 | + luật "không có" | 0.833 | 0.408 | 0.600 | 0.682 | 0.672 |
 | + luật hòa → chê | 0.833 | 0.404 | 0.594 | 0.652 | 0.683 |
-| **v3 – cả ba luật** | 0.833 | **0.411** | **0.605** | **0.712** | 0.662 |
-| nhãn yếu `aspect-dict+stars-v1` | 0.833 | 0.431 | 0.646 | 0.515 | 0.694 |
+| **Đủ luật – cả ba luật** | 0.833 | **0.411** | **0.605** | **0.712** | 0.662 |
+| nhãn yếu `aspect-dict+stars` | 0.833 | 0.431 | 0.646 | 0.515 | 0.694 |
 
 Cả ba luật đều đi theo một hướng: bắt được nhiều lời chê hơn, đổi lại báo nhầm nhiều hơn. R từ 0.212
 lên 0.712, P từ 0.824 xuống 0.662. Vẫn nên đổi, vì chê là lớp hiếm, bỏ sót một lời chê tốn hơn báo
 thừa một lời chê.
 
-#### Chấm v3 trên TEST đã đóng băng (348 câu, 378 cặp)
+#### Chấm từ điển đủ luật trên TEST đã đóng băng (348 câu, 378 cặp)
 
-Chọn cấu hình v3 **trên dev** trước, rồi mới đem sang TEST. Không chỉnh gì theo số TEST.
+Chọn cấu hình đủ luật **trên dev** trước, rồi mới đem sang TEST. Không chỉnh gì theo số TEST.
 
 | Hệ | Khía cạnh F1 | Theo ô 3 lớp | Chỉ pos/neg | R chê | P chê |
 |---|---|---|---|---|---|
-| v1 – chỉ đếm từ cảm xúc | 0.753 | 0.344 | 0.458 | 0.152 | 0.609 |
+| Cơ bản – chỉ đếm từ cảm xúc | 0.753 | 0.344 | 0.458 | 0.152 | 0.609 |
 | + luật đề nghị | 0.753 | 0.380 | 0.518 | 0.337 | 0.413 |
 | + luật "không có" | 0.753 | 0.381 | 0.510 | 0.391 | 0.350 |
 | + luật hòa → chê | 0.753 | 0.383 | **0.527** | 0.370 | 0.415 |
-| **v3 – cả ba luật** | **0.753** | **0.383** | 0.518 | **0.424** | 0.355 |
-| nhãn yếu `aspect-dict+stars-v1` | 0.753 | 0.346 | 0.519 | 0.261 | 0.511 |
+| **Đủ luật – cả ba luật** | **0.753** | **0.383** | 0.518 | **0.424** | 0.355 |
+| nhãn yếu `aspect-dict+stars` | 0.753 | 0.346 | 0.519 | 0.261 | 0.511 |
 
-So với v2 trên đúng tập TEST này: khía cạnh F1 0.743 → 0.753, R chê 0.315 → 0.424, macro pos/neg
+So với bản mở rộng trên đúng tập TEST này: khía cạnh F1 0.743 → 0.753, R chê 0.315 → 0.424, macro pos/neg
 0.496 → 0.518. Từ điển giờ bằng nhãn yếu về macro (0.518 so với 0.519), nhưng bắt được nhiều lời chê
 hơn hẳn (0.424 so với 0.261).
 
 Hai điều phải ghi rõ:
 
-- **Dev cao hơn TEST khá nhiều** (0.605 so với 0.518). Phần chênh là do v3 được chỉnh trên dev. Số
+- **Dev cao hơn TEST khá nhiều** (0.605 so với 0.518). Phần chênh là do bản đủ luật được chỉnh trên dev. Số
   đem đi báo cáo là số TEST.
-- Trên TEST, cấu hình **chỉ bật luật hòa** được 0.527, cao hơn v3 (0.518). Nhưng chọn cấu hình theo
-  điểm TEST là sai nguyên tắc, nên giữ v3 vì nó thắng trên dev. Chênh lệch này cũng cho thấy khoảng
+- Trên TEST, cấu hình **chỉ bật luật hòa** được 0.527, cao hơn bản đủ luật (0.518). Nhưng chọn cấu hình theo
+  điểm TEST là sai nguyên tắc, nên giữ bản đủ luật vì nó thắng trên dev. Chênh lệch này cũng cho thấy khoảng
   0.01 ở đây là nhiễu, không nên đọc thành hơn kém.
 
 Từng khía cạnh trên TEST:
@@ -1659,7 +1673,7 @@ câu được dự đoán bởi mô hình không thấy nó, nên đọc đượ
 
 | Hệ (dev 200 câu) | Khía cạnh F1 | Chỉ pos/neg | R chê | P chê |
 |---|---|---|---|---|
-| từ điển `dict-v3` | **0,833** | 0,605 | 0,712 | 0,662 |
+| từ điển `absa-dict` | **0,833** | 0,605 | 0,712 | 0,662 |
 | nhãn yếu | 0,833 | 0,646 | 0,515 | 0,694 |
 | TF-IDF + hồi quy logistic | 0,533 | 0,398 | 0,197 | 0,591 |
 | PhoBERT đóng băng + hồi quy logistic | 0,617 | 0,432 | 0,273 | 0,419 |
@@ -1688,7 +1702,7 @@ Bật dần từng khối đặc trưng, out-of-fold trên dev:
 
 | Đặc trưng | Khía cạnh F1 | Chỉ pos/neg | R chê | P chê |
 |---|---|---|---|---|
-| (từ điển `dict-v3`, luật tay) | 0,833 | 0,605 | 0,712 | 0,662 |
+| (từ điển `absa-dict`, luật tay) | 0,833 | 0,605 | 0,712 | 0,662 |
 | 11 tín hiệu từ điển | 0,833 | 0,677 | 0,697 | 0,708 |
 | + TF-IDF | 0,833 | **0,768** | 0,773 | 0,761 |
 | + PhoBERT đóng băng (thay TF-IDF) | 0,833 | 0,762 | 0,773 | 0,739 |
@@ -1705,7 +1719,7 @@ Hai điều đọc được: (1) chỉ thay if/else bằng hồi quy logistic tr
 
 | Hệ (TEST 348 câu, 378 cặp) | Khía cạnh F1 | Theo ô 3 lớp | Chỉ pos/neg | R chê | P chê |
 |---|---|---|---|---|---|
-| từ điển `dict-v3` | 0,753 | 0,383 | 0,518 | 0,424 | 0,355 |
+| từ điển `absa-dict` | 0,753 | 0,383 | 0,518 | 0,424 | 0,355 |
 | nhãn yếu | 0,753 | 0,346 | 0,519 | 0,261 | 0,511 |
 | **lai (từ điển + hồi quy logistic)** | 0,753 | **0,438** | **0,590** | **0,533** | 0,402 |
 
@@ -1772,7 +1786,7 @@ trong "Điều tôi thích" thì `positive`. Một dòng lệnh, không train g�
 
 | Hệ | dev (out-of-fold) | TEST |
 |---|---|---|
-| từ điển `dict-v3` | 0,605 | 0,518 |
+| từ điển `absa-dict` | 0,605 | 0,518 |
 | **chỉ luật phần review** | **0,774** | **0,583** |
 | mô hình lai (train 160 câu) | 0,768 | 0,590 |
 
@@ -1830,14 +1844,14 @@ Lệnh: `uv run python -m absa.supervised cv --model all` → `uv run python -m 
 
 ### Dựng đồ thị và hai mốc bắt buộc (2026-11-17)
 
-Đồ thị đồng xuất hiện kỹ năng trên **867 tin** (TopCV `topcv_v2` 331 tin + ITviec `itviec_v1` 536 tin).
+Đồ thị đồng xuất hiện kỹ năng trên **867 tin** (TopCV `topcv_20261115` 331 tin + ITviec `itviec_20261113` 536 tin).
 Đỉnh là kỹ năng đã chuẩn hóa về `canonical` của `ie/resources/skill_alias.csv`, cạnh nối hai kỹ năng
 cùng xuất hiện trong một tin. Đây là bài **tiêu thụ đầu ra của WM2**, nên dựng bằng cả hai bộ trích:
 
 | Bộ trích | Tin có kỹ năng | Kỹ năng/tin | Đỉnh | Cạnh | Mật độ |
 |---|---|---|---|---|---|
 | từ điển alias | 828/867 | 8,8 | 163 | 3.607 | 0,27 |
-| PhoBERT WM2 `v3-s1` | 799/867 | 7,2 | 151 | 2.649 | 0,23 |
+| PhoBERT WM2 self-training, seed 1 | 799/867 | 7,2 | 151 | 2.649 | 0,23 |
 
 Lọc `min_df = 5` (kỹ năng dưới 5 tin) và `min_weight = 3` (cạnh dưới 3 tin). Trọng số lưu hai dạng:
 `weight` là số tin chứa cả hai, `npmi` là NPMI – đếm thô thiên về kỹ năng phổ biến nên cần dạng đã
@@ -2096,7 +2110,7 @@ Lệnh: `uv run python -m graph.analyze rank --weight npmi` rồi `uv run python
 
 ### Baseline và content-based trên log synthetic (2026-11-12)
 
-> **Đã thay bằng số của log v2** (mục "Sửa log v2" ngay sau mục này): log v1 dồn 74% lượt xem vào một ngày.
+> **Đã thay bằng số của log đã sửa** (mục "Sửa log đã sửa" ngay sau mục này): log cũ dồn 74% lượt xem vào một ngày.
 
 - Log synthetic `recsys/events.py`: 400 người dùng ảo, mỗi người thuộc một nhóm nghề (mức 2 của `category`),
   hồ sơ kỹ năng rút từ kỹ năng phổ biến của nhóm; 70% lượt xem trong nhóm, 30% ngoài nhóm;
@@ -2110,7 +2124,7 @@ Lệnh: `uv run python -m graph.analyze rank --weight npmi` rồi `uv run python
 | `content-tfidf` (TF-IDF hồ sơ ↔ văn bản tin) | **0,174** | **0,181** |
 | `hybrid` (tfidf + 0,1 × độ phổ biến) | 0,168 | 0,177 |
 
-- Content-based hơn baseline khoảng **6 lần nDCG** *(log v1, sai cách chia – log v2: 4,7 lần; và vì
+- Content-based hơn baseline khoảng **6 lần nDCG** *(log cũ, sai cách chia – log đã sửa: 4,7 lần; và vì
   log sinh theo đúng giả định mà `content-*` dùng để xếp hạng, đây chỉ là kiểm tra cài đặt)*. Ghép thêm độ phổ biến không giúp gì (0,177 so với 0,181).
 - **Hạn chế phải ghi trong báo cáo:** log do chính nhóm sinh ra theo giả định "người dùng xem tin cùng nhóm nghề",
   mà `content-*` lại xếp hạng theo đúng tín hiệu đó → số này chỉ so sánh các chiến lược với nhau,
@@ -2118,9 +2132,9 @@ Lệnh: `uv run python -m graph.analyze rank --weight npmi` rồi `uv run python
 - Hai lỗi thiết kế đã sửa trong lúc làm, ghi lại để không lặp: (1) đặt thời điểm xem **đúng bằng** ngày đăng
   khiến mỗi tin chỉ nằm một phía của mốc chia, baseline độ phổ biến luôn = 0; (2) chia theo danh sách ngày
   thay vì theo phân vị lượt xem cho train chỉ 239 lượt (ngày đăng dồn về cuối kỳ).
-- Lệnh: `uv run python -m recsys.events` → `uv run python -m recsys.baseline --eval-set reco_v1`
+- Lệnh: `uv run python -m recsys.events` → `uv run python -m recsys.baseline --eval-set reco_synthetic_clamped`
 
-### Sửa log v2: chia theo thời gian v1 không phải chia theo thời gian (2026-11-17)
+### Sửa log đã sửa: chia theo thời gian của bản cũ không phải chia theo thời gian (2026-11-17)
 
 Phản biện hỏi vì sao mốc ở phân vị 70% mà train 929 / test 2.612. Kiểm lại thì có **hai lỗi chồng nhau**:
 
@@ -2131,7 +2145,7 @@ Phản biện hỏi vì sao mốc ở phân vị 70% mà train 929 / test 2.612.
 2. **Hàm chia** (`recsys/baseline.py`): lấy phần tử ở vị trí phân vị làm mốc rồi đưa mọi lượt `>= mốc`
    sang test. Mốc rơi đúng ngày đông đó, cả khối sang test.
 
-Hệ quả: test của v1 là "toàn bộ ngày cuối", train là cái đuôi trước nó. Số 0,174 / 0,181 ở trên đo
+Hệ quả: test của log cũ là "toàn bộ ngày cuối", train là cái đuôi trước nó. Số 0,174 / 0,181 ở trên đo
 trên cách chia đó.
 
 **Sửa.** Bộ sinh **bỏ** lượt xem rơi sau ngày cuối (chưa quan sát được, như log thật cắt ở ngày crawl)
@@ -2141,13 +2155,13 @@ lại) và bỏ: vẫn dồn 36% lượt xem vào ngày cuối.
 
 | Log | Lượt xem | Ngày đông nhất | Chia thực tế (mục tiêu 70/30) |
 |---|---|---|---|
-| v1 | 3.541 | 74% | 26 / 74 |
-| **v2** | 4.700 | 14% | **75 / 25** (test = 2 ngày cuối) |
+| log cũ | 3.541 | 74% | 26 / 74 |
+| **log đã sửa** | 4.700 | 14% | **75 / 25** (test = 2 ngày cuối) |
 
-Ở v2 số lượt xem tăng dần về cuối kỳ (ngày cuối 658, áp chót 535, trước đó 488) – đúng hướng, vì càng
+Ở log đã sửa số lượt xem tăng dần về cuối kỳ (ngày cuối 658, áp chót 535, trước đó 488) – đúng hướng, vì càng
 về cuối càng nhiều tin đã được đăng để xem.
 
-| Chiến lược | v1 Recall@10 | v1 nDCG@10 | **v2 Recall@10** | **v2 nDCG@10** |
+| Chiến lược | log cũ Recall@10 | log cũ nDCG@10 | **log đã sửa Recall@10** | **log đã sửa nDCG@10** |
 |---|---|---|---|---|
 | `popularity` (baseline) | 0,046 | 0,030 | 0,027 | 0,015 |
 | `content-skill` | 0,143 | 0,159 | 0,069 | 0,058 |
@@ -2155,14 +2169,14 @@ về cuối càng nhiều tin đã được đăng để xem.
 | `hybrid` | 0,168 | 0,177 | 0,097 | 0,072 |
 
 Thứ tự các chiến lược không đổi, nhưng mọi số giảm khoảng một nửa và câu "content-based hơn baseline
-khoảng 6 lần nDCG" không còn đúng (v2: 4,7 lần). **Số WM5 chính thức từ nay là cột v2.**
+khoảng 6 lần nDCG" không còn đúng (log đã sửa: 4,7 lần). **Số WM5 chính thức từ nay là cột log đã sửa.**
 
 Hạn chế lớn hơn vẫn nguyên: log do nhóm sinh theo giả định "người dùng xem tin cùng nhóm nghề", và
 `content-*` xếp hạng theo đúng tín hiệu đó. Sửa lỗi chia không sửa được vòng tròn này; số này chỉ kiểm
 tra cài đặt, không chứng minh gợi ý hữu ích với người thật. Vẫn cần chấm tay (hồ sơ × top-10, chấm mù).
 
-Lệnh: `uv run python -m recsys.events` (ra `reco_events_v2.jsonl`) →
-`uv run python -m recsys.baseline --eval-set reco_v2`
+Lệnh: `uv run python -m recsys.events` (ra `reco_events.jsonl`) →
+`uv run python -m recsys.baseline --eval-set reco_synthetic`
 
 ### Crawl thử TopCV (2026-10-12)
 
@@ -2193,7 +2207,7 @@ Lệnh: `uv run python -m recsys.events` (ra `reco_events_v2.jsonl`) →
 
 ### Tập test WM2 `skill_test1` (2026-10-12)
 
-- Snapshot `topcv_v1`: 304 tin IT TopCV, ngày đăng 17/08–12/10/2026, ids_sha256 `61bad0f9…d1377048`. Lệnh: `uv run python -m crawler.snapshot --source topcv --name topcv_v1`.
+- Snapshot `topcv_20261012`: 304 tin IT TopCV, ngày đăng 17/08–12/10/2026, ids_sha256 `61bad0f9…d1377048`. Lệnh: `uv run python -m crawler.snapshot --source topcv --name topcv_20261012`.
 - Rút mẫu: 1.000 câu từ 125 tin (tối đa 8 câu/tin, seed 20261012), 96 câu của 12 tin để đo κ. Nhóm nghề: hạ tầng IT 24, phát triển phần mềm 21, testing 17, thiết kế 15, product 14, AI 9.
 - Có câu tiếng Anh (tin của công ty nước ngoài).
 - Gán xong 1.000 câu (2026-11-12), 1 người, không gợi ý sẵn: 477 câu có kỹ năng (48%), 1.169 span.
@@ -2209,20 +2223,20 @@ Lệnh: `uv run python -m recsys.events` (ra `reco_events_v2.jsonl`) →
 
 ### Kết quả trên test `skill_test1` (2026-11-12)
 
-> **Số WM2 chính thức từ 2026-11-18 là của nhãn yếu v3** (F1 0,617), xem mục "WM2 – chốt nhãn yếu v3"
-> ở cuối file. Bảng dưới là của v1, giữ lại để đối chiếu.
+> **Số WM2 chính thức từ 2026-11-18 là của nhãn yếu self-training** (F1 0,617), xem mục "WM2 – chốt nhãn yếu self-training"
+> ở cuối file. Bảng dưới là của bản nhãn tag, giữ lại để đối chiếu.
 
 | Phương pháp | P | R | F1 (seqeval strict) | ΔF1 so với từ điển, CI95 bootstrap ghép cặp |
 |---|---|---|---|---|
-| Từ điển `dict-alias-v0` (baseline) | 0,742 | 0,315 | 0,442 [0,398; 0,488] | – |
-| PhoBERT `weak-v1`, 3 seed | 0,705 ± 0,014 | 0,469 ± 0,026 | 0,562 ± 0,014 | +0,111 → +0,136 (seed tệ nhất: [+0,083; +0,141]) |
+| Từ điển `dict-alias` (baseline) | 0,742 | 0,315 | 0,442 [0,398; 0,488] | – |
+| PhoBERT `weak-tag`, 3 seed | 0,705 ± 0,014 | 0,469 ± 0,026 | 0,562 ± 0,014 | +0,111 → +0,136 (seed tệ nhất: [+0,083; +0,141]) |
 | PhoBERT + từ điển, 3 seed | 0,699 ± 0,014 | 0,474 ± 0,026 | 0,564 ± 0,014 | +0,114 → +0,138 |
 
 - Cả 3 seed đều hơn baseline, khoảng tin cậy không chứa 0 (1.000 lần bootstrap theo câu). Ghép thêm từ điển chỉ +0,002, không đáng kể.
 - So với dev, F1 giảm (0,515 → 0,442 với từ điển; 0,596 → 0,562 với PhoBERT): dev từng được gợi ý sẵn bằng từ điển và cùng nguồn VietJobs; test gán tay không gợi ý, nguồn TopCV.
 - Run chạy khi repo chưa commit sạch (`217f81c-dirty`) → chạy lại sau khi commit để số gắn với một commit.
-- Lệnh: `uv run python -m ie.baseline_dict --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --snapshot topcv_v1`;
-  `uv run python -m ie.phobert eval --model data/models/wm2-phobert-s<N> --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>`;
+- Lệnh: `uv run python -m ie.baseline_dict --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --snapshot topcv_20261012`;
+  `uv run python -m ie.phobert eval --model data/models/wm2-phobert-tag-s<N> --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>`;
   `uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl` (ΔF1, CI ghép cặp).
 
 ### Phân tích lỗi PhoBERT trên test (seed 1, F1 0,555; xem tay ~80 câu lỗi)
@@ -2245,31 +2259,31 @@ Seed 1: 628 span bỏ sót, 207 span thừa, 413/1.000 câu có lỗi. Số theo
 ## Việc ngày 2026-11-18 (sau bản rà soát `data/ra-soat-scale-2026-11-18.md`)
 
 Ba việc đã hứa trong bản rà soát, cùng một sự cố crawl. Không chấm thêm hệ nào ngoài **một** lần
-chấm WM2 v3 đã lên kế hoạch trước.
+chấm WM2 self-training đã lên kế hoạch trước.
 
-### WM2 – chốt nhãn yếu v3 trên TEST: F1 0,442 → 0,617 (2026-11-18)
+### WM2 – chốt nhãn yếu self-training trên TEST: F1 0,442 → 0,617 (2026-11-18)
 
-Chọn **v3** trước khi chấm, theo số dev đã có: v3 cho F1 dev 0,644 ± 0,006 so với v2 0,642 ± 0,030 –
+Chọn **bản self-training** trước khi chấm, theo số dev đã có: bản self-training cho F1 dev 0,644 ± 0,006 so với bản nhãn luật 0,642 ± 0,030 –
 cùng điểm nhưng lệch giữa seed nhỏ hơn 5 lần. Chấm **một lần** trên `skill_test1` (1.000 câu đã
 đóng băng, sha256 `9f7a2a0c…`), không chỉnh gì sau khi xem số.
 
 | Phương pháp | P | R | F1 (seqeval strict) | ΔF1 so với từ điển, CI95 ghép cặp theo tin |
 |---|---|---|---|---|
-| Từ điển `dict-alias-v0` | 0,742 | 0,315 | 0,442 [0,398; 0,488] | – |
-| PhoBERT `weak-v1`, 3 seed (số cũ) | 0,705 ± 0,014 | 0,469 ± 0,026 | 0,562 ± 0,014 | +0,111 → +0,136 |
-| **PhoBERT `weak-v3`, 3 seed** | **0,715 ± 0,006** | **0,543 ± 0,003** | **0,617 ± 0,001** | **+0,174 → +0,176**, mọi CI trong [+0,128; +0,224], p(Δ≤0) = 0,000 |
-| PhoBERT `weak-v3` + từ điển | 0,697 ± 0,005 | 0,551 ± 0,003 | 0,615 ± 0,001 | +0,172 → +0,174 |
+| Từ điển `dict-alias` | 0,742 | 0,315 | 0,442 [0,398; 0,488] | – |
+| PhoBERT `weak-tag`, 3 seed (số cũ) | 0,705 ± 0,014 | 0,469 ± 0,026 | 0,562 ± 0,014 | +0,111 → +0,136 |
+| **PhoBERT `weak-selftrain`, 3 seed** | **0,715 ± 0,006** | **0,543 ± 0,003** | **0,617 ± 0,001** | **+0,174 → +0,176**, mọi CI trong [+0,128; +0,224], p(Δ≤0) = 0,000 |
+| PhoBERT `weak-selftrain` + từ điển | 0,697 ± 0,005 | 0,551 ± 0,003 | 0,615 ± 0,001 | +0,172 → +0,174 |
 
-- Từng seed: 0,616 / 0,618 / 0,617. **Lệch giữa seed 0,001** – ổn định hơn v1 (± 0,014) rất nhiều.
-  Self-training ba seed đồng thuận (v3) làm nhãn yếu bớt phụ thuộc lần khởi tạo.
-- Mức tăng so với v1 **nằm gần hết ở recall**: 0,469 → 0,543 (+0,074), precision gần như không đổi
-  (0,705 → 0,715). Đúng chiều của chẩn đoán cũ: lỗi chính của v1 là bỏ sót, không phải báo thừa.
-- Ghép thêm từ điển vào PhoBERT v3 **không còn giúp** (0,615 so với 0,617): từ điển đã nằm trong nhãn yếu.
+- Từng seed: 0,616 / 0,618 / 0,617. **Lệch giữa seed 0,001** – ổn định hơn bản nhãn tag (± 0,014) rất nhiều.
+  Self-training ba seed đồng thuận (self-training) làm nhãn yếu bớt phụ thuộc lần khởi tạo.
+- Mức tăng so với bản nhãn tag **nằm gần hết ở recall**: 0,469 → 0,543 (+0,074), precision gần như không đổi
+  (0,705 → 0,715). Đúng chiều của chẩn đoán cũ: lỗi chính của bản nhãn tag là bỏ sót, không phải báo thừa.
+- Ghép thêm từ điển vào PhoBERT self-training **không còn giúp** (0,615 so với 0,617): từ điển đã nằm trong nhãn yếu.
 - Lần chấm này vẫn chạy khi repo chưa commit sạch (`runlog` đã in cảnh báo) → nằm trong việc chạy lại
-  trên tag `report-wm-v1`.
+  trên tag `report-wm`.
 
-Lệnh: `uv run python -m ie.phobert eval --weak v3 --model data/models/wm2-phobert-v3-s<N> --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>`;
-`uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-v3 --out data/eval/skill_test1_preds_v3.json`
+Lệnh: `uv run python -m ie.phobert eval --weak selftrain --model data/models/wm2-phobert-selftrain-s<N> --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>`;
+`uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-selftrain --out data/eval/skill_test1_preds_selftrain.json`
 
 ### WM3 – đối chiếu với điểm sao ITviec: phép đo mà luật `section` không thắng (2026-11-18)
 
@@ -2287,7 +2301,7 @@ review (mức review) hoặc theo công ty (mức công ty).
 
 | Hệ | ρ | CI95 | AUC phát hiện sao ≤ 3 | số giá trị dự đoán khác nhau |
 |---|---|---|---|---|
-| từ điển `dict-v3` | 0,272 | [0,150; 0,371] | 0,617 | 15 |
+| từ điển `absa-dict` | 0,272 | [0,150; 0,371] | 0,617 | 15 |
 | luật phần review | 0,239 | [0,112; 0,356] | 0,585 | 9 |
 | **lai (từ điển + hồi quy logistic)** | **0,329** | [0,203; 0,430] | **0,635** | 10 |
 
@@ -2299,7 +2313,7 @@ ngoài văn bản mà hệ đọc (278 ô / 96 công ty):
 
 | Hệ | ρ | CI95 | AUC sao ≤ 3 |
 |---|---|---|---|
-| từ điển `dict-v3` | **−0,052** | [−0,171; 0,076] | 0,546 |
+| từ điển `absa-dict` | **−0,052** | [−0,171; 0,076] | 0,546 |
 | luật phần review | 0,154 | [0,033; 0,258] | 0,539 |
 | **lai** | **0,196** | [0,076; 0,296] | 0,587 |
 
@@ -2328,7 +2342,7 @@ ngoài văn bản mà hệ đọc (278 ô / 96 công ty):
 - ρ trả lời "có xếp đúng thứ tự hài lòng không", không trả lời "có gán đúng nhãn không". Phép đo này
   **bổ sung** cho macro-F1 trên TEST, không thay nó.
 - Mô hình lai train trên 160 câu dev; cột "ngoài dev" loại 45 review dev nên sạch, nhưng từ điển
-  `dict-v3` thì đã được chỉnh trên chính dev đó – lợi thế này nghiêng về phía **từ điển**, không nghiêng
+  `absa-dict` thì đã được chỉnh trên chính dev đó – lợi thế này nghiêng về phía **từ điển**, không nghiêng
   về mô hình.
 
 Lệnh: `uv run python -m absa.company_eval --b 2000` → `data/eval/wm3_stars.json`
@@ -2378,7 +2392,7 @@ tỷ lệ; chỉ nên đọc thứ tự.
 **Nhu cầu theo tháng (bảng 4) – một kết quả âm đáng ghi.** Tách theo nguồn thì **không có xu hướng
 thời gian nào**: TopCV tháng 09 (147 tin) và 10 (183 tin) cho AI 27% / 27%, API 28% / 23%; ITviec
 tháng 10 và 11 cho AI 46% / 45%. Bản gộp hai nguồn *trông như* AI tăng 27% → 45% theo tháng, nhưng đó
-chỉ là **chuyển nguồn**: `topcv_v2` dừng ở 24/10 còn tin tháng 11 toàn của ITviec. Với dữ liệu chỉ phủ
+chỉ là **chuyển nguồn**: `topcv_20261115` dừng ở 24/10 còn tin tháng 11 toàn của ITviec. Với dữ liệu chỉ phủ
 2–3 tháng tin đang mở, bài này **không đo được xu hướng nhu cầu** – phải viết đúng như vậy.
 
 **Bề rộng theo ngành (bảng 5, VietJobs đủ bộ 48.092 tin / 16 ngành).** Chỉ ở cỡ này mới đọc được

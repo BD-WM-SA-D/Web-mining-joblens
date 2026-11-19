@@ -12,30 +12,30 @@
 #   date: <yyyy-mm-dd>
 models:
   - name: skill-extractor
-    version: 0.1.0
-    image: <chưa đóng – hợp đồng chạy theo ADR 0001 D3>
-    s3_path: <chưa đẩy – model nằm ở data/models/wm2-phobert-v3-s{1,2,3} (không commit)>
+    version: 0.2.0
+    image: joblens/skill-extractor:0.2.0-<gitsha> (bản full, torch CPU; bản stub là từ điển)
+    s3_path: <chưa đẩy – model nằm ở data/models/skill-extractor/ (không commit)>
     train_snapshot: >
-      nhãn yếu wm2_weak_v3 (self-training, đồng thuận 3 seed) sinh từ tag "Kỹ năng cần có" của TopCV
-      + từ điển ie/resources/skill_alias.csv; cơ sở PhoBERT-base-v2, 3 epoch, lr 3e-5, max_len 256
-    metrics: {entity_f1_strict: 0.617, precision: 0.715, recall: 0.543}
+      nhãn yếu do LLM gán theo guideline gán nhãn kỹ năng 0.4 cho câu VietJobs (chỉ gửi câu VietJobs,
+      không gửi câu crawl hay câu TEST), câu TopCV giữ nhãn self-training từ tag "Kỹ năng cần có";
+      cơ sở PhoBERT-base-v2, 3 epoch, lr 3e-5, max_len 256, seed 1
+    metrics: {entity_f1_strict: 0.729, precision: 0.725, recall: 0.734}
     eval_set: skill_test1 (1.000 câu TEST đã đóng băng, sha256 9f7a2a0c…fbefba0362)
     trained_by: <Họ tên>
-    date: 2026-11-18
+    date: 2026-11-19
     note: >
-      Ba seed cho 0.616 / 0.618 / 0.617 (lệch 0.001). Baseline từ điển dict-alias-v0 được 0.442;
-      ΔF1 +0.174…+0.176, bootstrap ghép cặp theo tin CI95 trong [+0.128; +0.224], p(Δ≤0) = 0.000.
-      Bản v1 trước đây được 0.562 – thay bằng v3 từ 2026-11-18, mức tăng nằm gần hết ở recall
-      (0.469 → 0.543). Ghép thêm từ điển vào đầu ra không giúp nữa (0.615). Ghi silver.job_skills.
-      Chuẩn hóa ESCO CHƯA làm: cột esco_uri trong skill_alias.csv còn rỗng, nên canonical_id hiện là
-      id của từ điển 200 kỹ năng tự soạn, không phải ESCO.
+      Ba seed cho 0.729 / 0.727 / 0.734 (trung bình 0.730). Baseline từ điển dict-alias được 0.442.
+      So với mô hình trước (nhãn yếu self-training, 0.617): ΔF1 +0.109…+0.117, bootstrap ghép cặp theo
+      tin, CI95 nằm trên 0 ở cả 3 seed. Bỏ 30 câu TEST trùng câu train vẫn được 0.731. Image chứa seed 1.
+      Ghi silver.job_skills. Chuẩn hóa ESCO CHƯA làm: cột esco_uri trong skill_alias.csv còn rỗng, nên
+      canonical_id hiện là id của từ điển 200 kỹ năng tự soạn, không phải ESCO.
   - name: absa-aspect-polarity
     version: 0.1.0
     image: <chưa đóng – hợp đồng chạy theo ADR 0001 D3>
     s3_path: <không có file model – train lại trong ~3 giây bằng absa/supervised.py>
     train_snapshot: >
       200 câu dev gán tay (data/annotation/absa_trial.absa.jsonl + absa_dev2.absa.jsonl, 2026-11-17);
-      từ điển absa/resources/aspect_lexicon.csv + sentiment_lexicon.csv phiên bản dict-v3
+      từ điển absa/resources/aspect_lexicon.csv + sentiment_lexicon.csv (absa-dict)
     metrics: {aspect_f1_micro: 0.753, sentiment_f1_macro: 0.590}
     eval_set: absa_test1 (348 câu TEST đã đóng băng, sha256 ee7f4832…)
     trained_by: <Họ tên>

@@ -1,7 +1,7 @@
 """WM5 – gợi ý việc làm: độ phổ biến (baseline) và content-based, đánh giá chia theo thời gian.
 
-    uv run python -m recsys.baseline --snapshot data/crawl/topcv/topcv_v1.parquet \
-        --events data/eval/reco_events_v2.jsonl --eval-set reco_v2
+    uv run python -m recsys.baseline --snapshot data/crawl/topcv/topcv_20261012.parquet \
+        --events data/eval/reco_events.jsonl --eval-set reco_synthetic
 
 Chiến lược:
 - `popularity`  : xếp hạng theo số lượt xem trong phần train (không cá nhân hóa) – BASELINE.
@@ -32,7 +32,7 @@ from experiments.runlog import bootstrap_ci, save_run
 
 ROOT = Path(__file__).resolve().parents[1]
 K = 10
-VERSION = "recsys-content-v1"
+VERSION = "recsys-content"
 
 
 def load_events(path: Path) -> list[dict]:
@@ -47,7 +47,7 @@ def split_time(events: list[dict], test_frac: float) -> tuple[list[dict], list[d
 
     Thời điểm xem chỉ có độ phân giải **ngày**, nên nhiều lượt xem trùng mốc. Bản cũ lấy phần tử ở vị
     trí phân vị rồi đưa mọi lượt `>= mốc` sang test: khi mốc rơi đúng vào một ngày đông, cả ngày đó sang
-    test và tỷ lệ lệch xa mục tiêu (log v1: mục tiêu 70/30, thực tế 26/74). Giờ chọn trong các **ranh
+    test và tỷ lệ lệch xa mục tiêu (log cũ: mục tiêu 70/30, thực tế 26/74). Giờ chọn trong các **ranh
     giới giữa hai ngày** ranh giới nào cho tỷ lệ train gần mục tiêu nhất.
     """
     stamps = sorted(e["event_ts"] for e in events)
@@ -148,12 +148,12 @@ def evaluate(
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--snapshot", type=Path, default=ROOT / "data" / "crawl" / "topcv" / "topcv_v1.parquet")
-    ap.add_argument("--events", type=Path, default=ROOT / "data" / "eval" / "reco_events_v2.jsonl")
+    ap.add_argument("--snapshot", type=Path, default=ROOT / "data" / "crawl" / "topcv" / "topcv_20261012.parquet")
+    ap.add_argument("--events", type=Path, default=ROOT / "data" / "eval" / "reco_events.jsonl")
     ap.add_argument("--skills", type=Path, help="JSONL {job_uid, skills[]} từ WM2 (mặc định: dùng skill_tags)")
     ap.add_argument("--test-frac", type=float, default=0.3)
     ap.add_argument("--eval-set")
-    ap.add_argument("--snapshot-name", default="topcv_v1")
+    ap.add_argument("--snapshot-name", default="topcv_20261012")
     args = ap.parse_args()
 
     df = pd.read_parquet(args.snapshot).drop_duplicates("job_uid")

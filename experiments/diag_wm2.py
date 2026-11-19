@@ -7,7 +7,7 @@
 
 1. Khoảng tin cậy ΔF1 khi bootstrap **theo tin** thay vì theo câu (1.000 câu từ 125 tin).
 2. F1 partial (chồng lấn token) bên cạnh F1 strict – lỗi là "không nhận ra" hay "cắt sai mép".
-3. Recall tách theo kỹ năng **đã thấy** trong nhãn yếu v1 và **chưa thấy** – mô hình có vượt ra ngoài
+3. Recall tách theo kỹ năng **đã thấy** trong nhãn yếu từ tag và **chưa thấy** – mô hình có vượt ra ngoài
    từ điển/tag hay chỉ nội suy.
 4. Tỷ lệ câu có kỹ năng mà hệ đoán **rỗng hoàn toàn**, và recall mức câu (tìm đúng ≥ 1 span).
 """
@@ -26,7 +26,7 @@ from ie.baseline_dict import spans
 ROOT = Path(__file__).resolve().parents[1]
 BIO = ROOT / "data" / "annotation" / "skill_test1.bio.jsonl"
 PREDS = ROOT / "data" / "eval" / "skill_test1_preds.json"
-WEAK = ROOT / "data" / "weak" / "wm2_weak_v1.bio.jsonl"
+WEAK = ROOT / "data" / "weak" / "wm2_weak_tag.bio.jsonl"
 
 
 def span_set(tokens: list[str], tags: list[str]) -> set[tuple[int, int]]:

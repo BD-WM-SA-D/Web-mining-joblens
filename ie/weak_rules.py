@@ -1,8 +1,8 @@
-"""Luật làm sạch nhãn yếu WM2 bản v2, lấy từ guideline gán nhãn bản 0.4 (annotation/guideline_skill.md).
+"""Luật làm sạch nhãn yếu WM2, lấy từ guideline gán nhãn bản 0.4 (annotation/guideline_skill.md).
 
 Chỉ dựa vào guideline và ví dụ trong guideline, KHÔNG dựa vào lỗi quan sát trên test `skill_test1`.
 Ba việc:
-1. EXTRA_FORMS: khái niệm guideline nói là kỹ năng nhưng nhãn yếu v1 hay thiếu (cụm tiếng Việt, sản phẩm thiết kế
+1. EXTRA_FORMS: khái niệm guideline nói là kỹ năng nhưng nhãn yếu từ tag hay thiếu (cụm tiếng Việt, sản phẩm thiết kế
    trung gian, nghiệp vụ ngành, loại kiểm thử, loại quản lý chính thức…) → thêm vào danh sách dò.
 2. STOP_FORMS: thứ guideline nói KHÔNG gán (tài liệu BA, thiết bị hạ tầng, bảo mật chung chung, từ chung, động từ
    chung + việc) → bỏ span nếu khớp nguyên văn.
@@ -215,7 +215,7 @@ def _set(tags: list[str], a: int, b: int, value: bool) -> None:
 
 
 def refine(tokens: list[str], tags: list[str]) -> list[str]:
-    """Áp luật v2 lên một câu đã gán nhãn yếu."""
+    """Áp luật lên một câu đã gán nhãn yếu."""
     out = list(tags)
     split = False
     for a, b, text in spans(tokens, tags):

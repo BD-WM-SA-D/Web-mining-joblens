@@ -1,6 +1,6 @@
 """Dựng bản nháp từ điển alias kỹ năng (baseline WM2) từ cột technical_skills của tập IT.
 
-Cách chạy (cần data/vietjobs/it_v1.parquet – xem ie/vietjobs.py):
+Cách chạy (cần data/vietjobs/vietjobs_it.parquet – xem ie/vietjobs.py):
     uv run python -m ie.skill_alias --top 200
 
 Ghi ra ie/resources/skill_alias.csv (commit được – chỉ là tên kỹ năng, không phải dữ liệu tin):
@@ -21,7 +21,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-SNAPSHOT = ROOT / "data" / "vietjobs" / "it_v1.parquet"
+SNAPSHOT = ROOT / "data" / "vietjobs" / "vietjobs_it.parquet"
 OUT = Path(__file__).resolve().parent / "resources" / "skill_alias.csv"
 
 # Gộp tay những cách viết mà quy tắc chuẩn hóa không bắt được (khóa sau chuẩn hóa → khóa đích)

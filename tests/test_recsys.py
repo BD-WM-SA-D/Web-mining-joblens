@@ -92,7 +92,7 @@ def test_chia_theo_thoi_gian_khong_de_mot_ngay_dong_keo_lech_ty_le():
 
 
 def test_log_synthetic_khong_don_luot_xem_vao_ngay_cuoi():
-    """Lượt xem rơi sau ngày cuối snapshot bị bỏ, không bị dồn về ngày cuối (lỗi của log v1)."""
+    """Lượt xem rơi sau ngày cuối snapshot bị bỏ, không bị dồn về ngày cuối (lỗi của log cũ)."""
     import collections
 
     import pandas as pd

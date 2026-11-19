@@ -5,8 +5,8 @@ Cách chạy:
     uv run python -m ie.vietjobs --csv đường/dẫn.csv
 
 Kết quả (trong data/, đã gitignore – KHÔNG commit):
-    data/vietjobs/it_v1.parquet         tin thuộc nhóm công nghệ thông tin, có source_job_id và job_uid
-    data/vietjobs/it_v1.manifest.json   nguồn, sha256 file CSV, số dòng – ghi vào báo cáo để tái lập
+    data/vietjobs/vietjobs_it.parquet         tin thuộc nhóm công nghệ thông tin, có source_job_id và job_uid
+    data/vietjobs/vietjobs_it.manifest.json   nguồn, sha256 file CSV, số dòng – ghi vào báo cáo để tái lập
 
 source_job_id = số thứ tự dòng trong file CSV gốc (VietJobs không có ID tin). Chỉ ổn định khi dùng
 đúng file CSV có sha256 ghi trong manifest. Trích dẫn: Pham Dinh et al., LREC 2026.
@@ -28,7 +28,7 @@ from joblens_contracts import job_uid
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CSV = ROOT / "data" / "vietjobs" / "VietJobs.csv"
 OUT_DIR = ROOT / "data" / "vietjobs"
-SNAPSHOT = "it_v1"
+SNAPSHOT = "vietjobs_it"
 IT_CATEGORY = "công_nghệ_thông_tin_kỹ_thuật_số"
 HF_DATASET = "dinhieufam/VietJobs"
 LIST_COLS = ["qualifications", "technical_skills", "soft_skills", "languages_required", "benefits"]

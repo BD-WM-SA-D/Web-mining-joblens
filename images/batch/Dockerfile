@@ -2,8 +2,8 @@
 # Một Dockerfile cho cả ba (JOB chọn module), hai bản (target):
 #   stub – không torch, không model; skill-extractor dùng từ điển, absa-scorer dùng từ điển, job-dedup dùng khóa
 #          tiêu đề + công ty chính xác. Nhỏ, chạy vài giây – để Big Data dựng DAG trước khi có image thật.
-#   full – PhoBERT v3 (torch CPU) cho skill-extractor, mô hình lai cho absa-scorer, dedup v2 cho job-dedup.
-#          Cần có sẵn trong data/: data/models/wm2-phobert-v3-s1/, data/annotation/absa_trial|absa_dev2.absa.jsonl,
+#   full – PhoBERT (torch CPU) cho skill-extractor, mô hình lai cho absa-scorer, MinHash LSH cho job-dedup.
+#          Cần có sẵn trong data/: data/models/skill-extractor/, data/annotation/absa_trial|absa_dev2.absa.jsonl,
 #          data/absa/sentences.jsonl (build trên máy của WM, không có trong git).
 #
 # Build từ gốc repo, tag x.y.z-gitsha (không dùng latest):
@@ -65,7 +65,7 @@ COPY crawler/ crawler/
 COPY experiments/ experiments/
 COPY ie/ ie/
 COPY service/ service/
-COPY data/models/wm2-phobert-v3-s1/ data/models/wm2-phobert-v3-s1/
+COPY data/models/skill-extractor/ data/models/skill-extractor/
 COPY data/annotation/absa_trial.absa.jsonl data/annotation/absa_dev2.absa.jsonl data/annotation/
 COPY data/absa/sentences.jsonl data/absa/
 ENV JOBLENS_JOB=batch.${JOB} JOBLENS_IMAGE_VERSION=${VERSION} JOBLENS_STUB=0 PYTHONUNBUFFERED=1 \

@@ -3,7 +3,7 @@
   "task": "WM3",
   "rq": "RQ3",
   "method": "absa-hybrid",
-  "baseline_of": "dict-v3",
+  "baseline_of": "absa-dict",
   "data": {
     "eval_set": "absa_test1",
     "split": "test",

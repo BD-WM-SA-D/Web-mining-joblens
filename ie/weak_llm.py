@@ -1,8 +1,8 @@
-"""Nhãn yếu v5 cho WM2: file v3, thay nhãn câu VietJobs bằng nhãn LLM (ie/llm_label.py).
+"""Nhãn yếu LLM cho WM2: lấy file nhãn self-training, thay nhãn câu VietJobs bằng nhãn LLM (ie/llm_label.py).
 
     uv run python -m ie.weak_llm --llm data/llm/train_luna.bio.jsonl
 
-Câu TopCV giữ nhãn v3 (không được gửi ra API). Câu VietJobs mà LLM chưa gán (dừng vì ngân sách, lỗi) giữ nhãn v3
+Câu TopCV giữ nhãn self-training (không được gửi ra API). Câu VietJobs mà LLM chưa gán (dừng vì ngân sách, lỗi) giữ nhãn self-training
 và được đếm. Theo mục đăng ký trước "Kết quả bước thử nhãn LLM trên dev" trong `experiments/results.md`.
 """
 
@@ -19,8 +19,8 @@ WEAK_DIR = Path(__file__).resolve().parents[1] / "data" / "weak"
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--llm", type=Path, required=True)
-    ap.add_argument("--src", type=Path, default=WEAK_DIR / "wm2_weak_v3.bio.jsonl")
-    ap.add_argument("--out", type=Path, default=WEAK_DIR / "wm2_weak_v5.bio.jsonl")
+    ap.add_argument("--src", type=Path, default=WEAK_DIR / "wm2_weak_selftrain.bio.jsonl")
+    ap.add_argument("--out", type=Path, default=WEAK_DIR / "wm2_weak_llm.bio.jsonl")
     args = ap.parse_args()
 
     llm = {r["id"]: r for r in map(json.loads, args.llm.read_text("utf-8").splitlines())}
@@ -34,11 +34,11 @@ def main() -> None:
                 r = {**r, "tags": new["tags"]}
                 n["llm"] += 1
             else:
-                n[f"v3_{r['source']}"] += 1
+                n[f"selftrain_{r['source']}"] += 1
             n["pos"] += "B-SKILL" in r["tags"]
             n["span"] += r["tags"].count("B-SKILL")
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    print(f"v5: {dict(n)} → {args.out}")
+    print(f"nhãn LLM: {dict(n)} → {args.out}")
 
 
 if __name__ == "__main__":

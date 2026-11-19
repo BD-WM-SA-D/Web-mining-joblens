@@ -5,9 +5,9 @@
   "method": "popularity",
   "baseline_of": null,
   "data": {
-    "eval_set": "reco_v1",
+    "eval_set": "reco_synthetic_clamped",
     "split": "test",
-    "snapshot": "topcv_v1",
+    "snapshot": "topcv_20261012",
     "ids_sha256": "1a32732d2e30a8ccd903ef5983db8374c791c5b5b0269ff8ca6c2420976918b1",
     "n_items": 400,
     "n_gold": null
@@ -26,7 +26,7 @@
   },
   "runtime": {},
   "repro": {
-    "command": "C:\\Users\\hoang le\\joblens\\repos\\Web-mining-joblens\\recsys\\baseline.py --eval-set reco_v1",
+    "command": "C:\\Users\\hoang le\\joblens\\repos\\Web-mining-joblens\\recsys\\baseline.py --eval-set reco_synthetic_clamped",
     "git_commit": "217f81c-dirty",
     "models_yaml": null
   },

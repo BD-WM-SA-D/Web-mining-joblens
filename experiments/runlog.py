@@ -1,7 +1,7 @@
 """Ghi file kết quả JSON theo experiments/FORMAT-ket-qua.md (phần A).
 
     from experiments.runlog import save_run, ids_sha256, bootstrap_ci
-    save_run(task="WM2", method="dict-alias-v0", eval_set="skill_batch1", split="dev",
+    save_run(task="WM2", method="dict-alias", eval_set="skill_batch1", split="dev",
              metrics={"precision": 0.87, "recall": 0.36, "f1": 0.51}, ids=[...], command="uv run ...")
 
 Chỉ ghi số, không ghi câu văn hay dữ liệu gốc.

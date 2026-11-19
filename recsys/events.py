@@ -1,6 +1,6 @@
 """WM5 – sinh log tương tác synthetic (không có người dùng thật).
 
-    uv run python -m recsys.events --snapshot data/crawl/topcv/topcv_v1.parquet --users 400
+    uv run python -m recsys.events --snapshot data/crawl/topcv/topcv_20261012.parquet --users 400
 
 Cách sinh (ghi rõ trong báo cáo – đây là hạn chế lớn nhất của WM5):
 - Mỗi người dùng ảo thuộc một **nhóm nghề** (lấy từ cột category mức 2 của tin, ví dụ "Software Engineering").
@@ -8,7 +8,7 @@ Cách sinh (ghi rõ trong báo cáo – đây là hạn chế lớn nhất của
 - Người dùng "xem" tin theo xác suất: tin cùng nhóm nghề nhiều hơn, tin khác nhóm ít hơn (nhiễu),
   và tin lương/ngày mới hơn được ưu tiên nhẹ (mô phỏng thói quen xem tin mới).
 - **Thời điểm xem** = ngày đăng tin + 0..`--window` ngày (mặc định 21). Lượt xem rơi sau ngày cuối
-  snapshot thì **bỏ** (chưa quan sát được), như log thật cắt ở ngày crawl. v1 dồn chúng về ngày cuối,
+  snapshot thì **bỏ** (chưa quan sát được), như log thật cắt ở ngày crawl. Bản cũ dồn chúng về ngày cuối,
   làm 74% lượt xem rơi vào một ngày – xem `experiments/results.md`, mục WM5.
   Nhờ vậy một tin được xem ở nhiều thời điểm khác nhau; chia train/test **theo thời gian** mới có nghĩa
   (nếu đặt thời điểm xem đúng bằng ngày đăng thì mỗi tin chỉ nằm một phía, baseline độ phổ biến luôn = 0).
@@ -29,9 +29,9 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SNAPSHOT = ROOT / "data" / "crawl" / "topcv" / "topcv_v1.parquet"
-DEFAULT_OUT = ROOT / "data" / "eval" / "reco_events_v2.jsonl"
-VERSION = "events-synthetic-v2"
+DEFAULT_SNAPSHOT = ROOT / "data" / "crawl" / "topcv" / "topcv_20261012.parquet"
+DEFAULT_OUT = ROOT / "data" / "eval" / "reco_events.jsonl"
+VERSION = "events-synthetic"
 
 
 def job_group(category: str | None) -> str:
@@ -93,7 +93,7 @@ def generate(df: pd.DataFrame, n_users: int, seed: int, window: int = 21) -> lis
             seen.add(j["job_uid"])
             posted = date.fromisoformat(str(j["date_posted"]))
             # Lượt xem rơi sau ngày cuối snapshot thì BỎ (chưa quan sát được), giống log thật cắt ở ngày crawl.
-            # v1 dồn chúng về đúng ngày cuối bằng `min(..., last_day)`: 2.612/3.541 lượt (74%) rơi vào một
+            # bản cũ dồn chúng về đúng ngày cuối bằng `min(..., last_day)`: 2.612/3.541 lượt (74%) rơi vào một
             # ngày. Rút độ trễ trong số ngày còn lại cũng không ổn: vẫn dồn về mấy ngày cuối (36% một ngày).
             viewed = posted + timedelta(days=rng.randint(0, window))
             if viewed > last_day:

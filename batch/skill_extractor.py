@@ -1,7 +1,7 @@
 """Image `skill-extractor` (WM2): silver.job_postings → silver.job_skills (contract 0.1.1, overwrite_partition).
 
     # chạy một mình trên file cục bộ (snapshot TopCV), bản stub từ điển
-    uv run python -m batch.skill_extractor --input-file data/crawl/topcv/topcv_v2.parquet \\
+    uv run python -m batch.skill_extractor --input-file data/crawl/topcv/topcv_20261115.parquet \\
         --output-file data/batch/job_skills.parquet --run-id local-1 --stub
     # như Airflow gọi (ADR 0001 D3)
     python -m batch.skill_extractor --input-table silver.job_postings --input-snapshot <id> \\
@@ -10,8 +10,8 @@
 Hai chế độ:
 - `--stub`: từ điển alias (`ie/resources/skill_alias.csv`, baseline WM2, F1 0,442 trên `skill_test1`). Không cần
   torch, vài giây cho vài nghìn tin.
-- mặc định: PhoBERT nhãn yếu v3 (F1 0,617 trên `skill_test1`), thư mục model ở `JOBLENS_SKILL_MODEL`
-  (mặc định `data/models/wm2-phobert-v3-s1`). Cần nhóm `ml`. Trên CPU chậm hơn nhiều – nhóm BD cần đo
+- mặc định: PhoBERT fine-tune trên nhãn yếu (F1 0,730 trên `skill_test1`), thư mục model ở `JOBLENS_SKILL_MODEL`
+  (mặc định `data/models/skill-extractor`). Cần nhóm `ml`. Trên CPU chậm hơn nhiều – nhóm BD cần đo
   thời gian cho 50k tin trước khi đưa vào DAG hằng ngày.
 
 Mỗi tin lấy kỹ năng từ ba trường: `description`, `requirements` (span ký tự trong trường đó) và `skill_tags`
@@ -164,7 +164,7 @@ def main() -> None:
     jobs = load_input(args, INPUT_COLUMNS)
     model = None
     if not args.stub:
-        model_dir = Path(os.environ.get("JOBLENS_SKILL_MODEL", ROOT / "data" / "models" / "wm2-phobert-v3-s1"))
+        model_dir = Path(os.environ.get("JOBLENS_SKILL_MODEL", ROOT / "data" / "models" / "skill-extractor"))
         model = PhoBERT(model_dir)
     rows = extract(jobs, args.stub, args.run_id, model)
     print(f"{len(jobs)} tin → {len(rows)} kỹ năng ({version(args.stub)})", flush=True)

@@ -2,7 +2,7 @@
 
     uv run python -m experiments.skill_demand                      # từ điển, corpus tự crawl + VietJobs IT
     uv run python -m experiments.skill_demand --all-categories     # thêm VietJobs đủ 48.092 tin (đọc CSV 103 MB)
-    uv run python -m experiments.skill_demand --extractor phobert --model data/models/wm2-phobert-v3-s1
+    uv run python -m experiments.skill_demand --extractor phobert --model data/models/wm2-phobert-selftrain-s1
 
 Đề tài đã đăng ký là *"Mining Vietnamese Job Postings for Skill Demand"*, nhưng `results.md` chỉ có số
 chất lượng mô hình, chưa có bảng nào về **nhu cầu**. Script này sinh bốn bảng đó. Không cần gán nhãn,
@@ -13,7 +13,7 @@ không cần crawl thêm.
 | Nguồn | Số tin | Vai trò |
 |---|---|---|
 | TopCV + ITviec (tự crawl) | ~900 | Dữ liệu chính của môn; tập test WM2 lấy từ đây |
-| VietJobs IT (`it_v1`) | 1.906 | **Chỉ để so sánh và lấy bề rộng**, không bao giờ là tập test (quy tắc repo) |
+| VietJobs IT (`vietjobs_it`) | 1.906 | **Chỉ để so sánh và lấy bề rộng**, không bao giờ là tập test (quy tắc repo) |
 | VietJobs đủ bộ | 48.092 | Bề rộng theo ngành, với `--all-categories` |
 
 Mọi bảng đều tách theo nguồn. Trộn ba nguồn thành một con số là che mất thiên lệch nguồn, mà thiên
@@ -42,10 +42,10 @@ from service.skills import SkillCatalog
 
 ROOT = Path(__file__).resolve().parents[1]
 CRAWL = {
-    "topcv": ROOT / "data" / "crawl" / "topcv" / "topcv_v2.parquet",
-    "itviec": ROOT / "data" / "crawl" / "itviec-jobs" / "itviec_v1.parquet",
+    "topcv": ROOT / "data" / "crawl" / "topcv" / "topcv_20261115.parquet",
+    "itviec": ROOT / "data" / "crawl" / "itviec-jobs" / "itviec_20261113.parquet",
 }
-VIETJOBS_IT = ROOT / "data" / "vietjobs" / "it_v1.parquet"
+VIETJOBS_IT = ROOT / "data" / "vietjobs" / "vietjobs_it.parquet"
 VIETJOBS_ALL = ROOT / "data" / "vietjobs" / "VietJobs.csv"
 TEXT_FIELDS = ("title", "job_title", "description", "requirements_text")
 OUT = ROOT / "data" / "eval" / "skill_demand.json"
@@ -238,7 +238,7 @@ def load_crawl(collapse_dup: bool) -> dict[str, list[dict]]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--extractor", choices=["dict", "phobert"], default="dict")
-    ap.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "wm2-phobert-v3-s1")
+    ap.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "wm2-phobert-selftrain-s1")
     ap.add_argument("--top", type=int, default=30)
     ap.add_argument("--top-distinctive", type=int, default=6)
     ap.add_argument("--min-jobs", type=int, default=20, help="nhóm dưới ngưỡng này không in (số quá nhỏ)")
@@ -293,7 +293,7 @@ def main() -> None:
 
     print("## Bảng 4 – nhu cầu theo tháng, TÁCH THEO NGUỒN (chỉ tin đang mở lúc crawl)\n")
     print(
-        "> Cũng không được gộp: `topcv_v2` dừng ở 24/10 còn ITviec có tin tháng 11, nên đường tăng của\n"
+        "> Cũng không được gộp: `topcv_20261115` dừng ở 24/10 còn ITviec có tin tháng 11, nên đường tăng của\n"
         "> bản gộp là chuyển nguồn chứ không phải xu hướng thị trường.\n"
     )
     for src in CRAWL:

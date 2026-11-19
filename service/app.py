@@ -25,7 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from service.skills import DICT_CONFIDENCE, SkillCatalog
 
-MODEL_VERSION = "stub-dict-alias-v0"
+MODEL_VERSION = "stub-dict-alias"
 INDEX_PATH = Path(os.environ.get("JOBLENS_MINING_INDEX", "data/index/job_skills.json"))
 
 app = FastAPI(title="JobLens Mining API (stub)", version="0.1.0")

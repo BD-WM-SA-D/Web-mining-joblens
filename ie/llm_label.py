@@ -1,12 +1,12 @@
 """Nhãn yếu WM2 bằng LLM (OpenAI) theo guideline 0.4 – chỉ cho câu VietJobs.
 
     uv run python -m ie.llm_label --model gpt-6-luna --bio data/annotation/skill_batch1.bio.jsonl --name dev_luna --eval
-    uv run python -m ie.llm_label --model gpt-6-luna --bio data/weak/wm2_weak_v3.bio.jsonl --name train_luna --budget 2
+    uv run python -m ie.llm_label --model gpt-6-luna --bio data/weak/wm2_weak_selftrain.bio.jsonl --name train_luna --budget 2
 
 Theo mục đăng ký trước "Nhãn yếu bằng LLM theo guideline" trong `experiments/results.md`.
 
 - Key đọc từ `.env` (OPENAI_API_KEY), không in ra. Kết quả ghi vào data/llm/ (gitignore), không commit.
-- **Chỉ gửi câu VietJobs**: câu nào có job_uid không thuộc `it_v1` (câu crawl TopCV/ITviec, câu TEST) bị bỏ, không
+- **Chỉ gửi câu VietJobs**: câu nào có job_uid không thuộc `vietjobs_it` (câu crawl TopCV/ITviec, câu TEST) bị bỏ, không
   bao giờ rời máy. Guideline gửi kèm đã bỏ phần quy trình và mọi dòng ví dụ là chuỗi con của một câu `skill_test1`.
 - Mỗi lần gọi gửi --batch câu, LLM trả danh sách span chép nguyên văn; span được dò lại trên token (khớp dài nhất,
   không chồng nhau) để ra nhãn BIO. Span không dò được thì đếm và bỏ.
@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 GUIDELINE = ROOT / "annotation" / "guideline_skill.md"
 TEST_BIO = ROOT / "data" / "annotation" / "skill_test1.bio.jsonl"
-IT_V1 = ROOT / "data" / "vietjobs" / "it_v1.parquet"
+VIETJOBS_IT = ROOT / "data" / "vietjobs" / "vietjobs_it.parquet"
 OUT_DIR = ROOT / "data" / "llm"
 URL = "https://api.openai.com/v1/chat/completions"
 # USD / 1 triệu token: (vào, vào có cache, ra). Lấy từ trang tổng hợp giá 11/2026, chưa đối chiếu trang OpenAI.
@@ -89,7 +89,7 @@ def guideline_text() -> tuple[str, int]:
 def allowed_uids() -> set[str]:
     import pandas as pd
 
-    return set(pd.read_parquet(IT_V1, columns=["job_uid"])["job_uid"])
+    return set(pd.read_parquet(VIETJOBS_IT, columns=["job_uid"])["job_uid"])
 
 
 def to_bio(tokens: list[str], skills: list[str]) -> tuple[list[str], int]:
@@ -184,7 +184,7 @@ def main() -> None:
     spent = sum(json.loads(x)["usd"] for x in log.read_text("utf-8").splitlines()) if log.exists() else 0.0
     todo = [r for r in rows if r["id"] not in done]
     print(
-        f"{len(rows)} câu VietJobs (chặn {blocked} câu không thuộc it_v1); còn {len(todo)} câu; "
+        f"{len(rows)} câu VietJobs (chặn {blocked} câu không thuộc vietjobs_it); còn {len(todo)} câu; "
         f"guideline bỏ {dropped} dòng ví dụ trùng TEST; đã tốn ~${spent:.3f}",
         flush=True,
     )

@@ -1,6 +1,6 @@
 """Chỉ mục gợi ý cho mining-service: job_uid → tập skill_id, dựng từ snapshot tin crawl.
 
-    uv run python -m service.index --jobs data/crawl/topcv/topcv_v1.parquet --out data/index/job_skills.json
+    uv run python -m service.index --jobs data/crawl/topcv/topcv_20261012.parquet --out data/index/job_skills.json
 
 File chỉ mục chỉ chứa job_uid và skill_id (không có văn bản tin), dùng khi build image.
 Bản stub: trích bằng từ điển trên tiêu đề + mô tả + yêu cầu, cộng tag "Kỹ năng cần có" khớp từ điển.
@@ -36,7 +36,7 @@ def main() -> None:
     import pandas as pd
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--jobs", type=Path, default=Path("data/crawl/topcv/topcv_v1.parquet"))
+    ap.add_argument("--jobs", type=Path, default=Path("data/crawl/topcv/topcv_20261012.parquet"))
     ap.add_argument("--out", type=Path, default=Path("data/index/job_skills.json"))
     args = ap.parse_args()
     rows = pd.read_parquet(args.jobs).to_dict("records")

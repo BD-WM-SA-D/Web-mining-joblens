@@ -1,8 +1,8 @@
 """WM6 – dựng đồ thị đồng xuất hiện kỹ năng từ tin tuyển dụng đã crawl.
 
     uv run python -m graph.build --extractor dict
-    uv run python -m graph.build --extractor phobert --model data/models/wm2-phobert-v3-s1
-    uv run python -m graph.build --snapshots data/vietjobs/it_v1.parquet --no-tags         --out data/graph/skill_graph_vietjobs.json      # đối chiếu trên kho tin khác (VietJobs)
+    uv run python -m graph.build --extractor phobert --model data/models/wm2-phobert-selftrain-s1
+    uv run python -m graph.build --snapshots data/vietjobs/vietjobs_it.parquet --no-tags         --out data/graph/skill_graph_vietjobs.json      # đối chiếu trên kho tin khác (VietJobs)
 
 Đỉnh là một kỹ năng (đã chuẩn hóa về `canonical` của `ie/resources/skill_alias.csv`), cạnh nối hai
 kỹ năng cùng xuất hiện trong một tin. Đây là bài WM6 **tiêu thụ đầu ra của WM2**: chất lượng đồ thị
@@ -40,8 +40,8 @@ from service.skills import SkillCatalog
 
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOTS = [
-    ROOT / "data" / "crawl" / "topcv" / "topcv_v2.parquet",
-    ROOT / "data" / "crawl" / "itviec-jobs" / "itviec_v1.parquet",
+    ROOT / "data" / "crawl" / "topcv" / "topcv_20261115.parquet",
+    ROOT / "data" / "crawl" / "itviec-jobs" / "itviec_20261113.parquet",
 ]
 OUT = ROOT / "data" / "graph"
 TEXT_FIELDS = ("title", "description", "requirements_text")
@@ -191,7 +191,7 @@ def load_rows(paths: list[Path], collapse_dup: bool) -> list[dict]:
     frames = [pd.read_parquet(p) for p in paths if p.exists()]
     if not frames:
         raise SystemExit(f"không có snapshot nào trong {[str(p) for p in paths]}")
-    # VietJobs (`data/vietjobs/it_v1.parquet`) đặt tên cột khác và không có tag nhà tuyển dụng; cột
+    # VietJobs (`data/vietjobs/vietjobs_it.parquet`) đặt tên cột khác và không có tag nhà tuyển dụng; cột
     # `technical_skills` của nó do LLM sinh nên KHÔNG dùng thay `skill_tags`.
     frames = [
         f.rename(columns={"job_title": "title"}).assign(source="vietjobs") if "job_title" in f.columns else f
@@ -211,7 +211,7 @@ def load_rows(paths: list[Path], collapse_dup: bool) -> list[dict]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--extractor", choices=["dict", "phobert"], default="dict")
-    ap.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "wm2-phobert-v3-s1")
+    ap.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "wm2-phobert-selftrain-s1")
     ap.add_argument("--snapshots", type=Path, nargs="+", default=SNAPSHOTS)
     ap.add_argument("--collapse-dup", action="store_true", help="gộp tin cùng tiêu đề+công ty (thử độ bền)")
     ap.add_argument("--no-tags", action="store_true", help="bỏ tag nhà tuyển dụng, chỉ khớp từ điển trên văn bản")

@@ -1,6 +1,6 @@
 """Đóng băng dữ liệu crawl thành snapshot cố định (Parquet) để train/test tái lập được.
 
-    uv run python -m crawler.snapshot --source topcv --name topcv_v1
+    uv run python -m crawler.snapshot --source topcv --name topcv_20261012
 
 Đọc mọi data/crawl/<source>/*/jobs.jsonl (message job_posting.v1), bỏ trùng theo source_job_id (giữ lần crawl
 mới nhất), ghi data/crawl/<source>/<name>.parquet + <name>.manifest.json. Không commit (data/ đã gitignore).
@@ -58,13 +58,13 @@ def load_messages(files: list[Path]) -> pd.DataFrame:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="topcv")
-    ap.add_argument("--name", required=True, help="tên snapshot, ví dụ topcv_v1 – không ghi đè snapshot đã có")
+    ap.add_argument("--name", required=True, help="tên snapshot, ví dụ topcv_20261012 – không ghi đè snapshot đã có")
     args = ap.parse_args()
 
     base = ROOT / "data" / "crawl" / args.source
     out = base / f"{args.name}.parquet"
     if out.exists():
-        raise SystemExit(f"{out} đã có – snapshot là bất biến, đặt tên mới (ví dụ {args.source}_v2)")
+        raise SystemExit(f"{out} đã có – snapshot là bất biến, đặt tên mới (ví dụ {args.source}_<yyyymmdd>)")
     files = list(base.glob("*/jobs.jsonl"))
     df = load_messages(files)
     df.to_parquet(out, index=False)

@@ -43,8 +43,8 @@ def shared(topcv: pd.DataFrame, itviec: pd.DataFrame, job_to_company: dict[str, 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--topcv", type=Path, default=ROOT / "data" / "crawl" / "topcv" / "topcv_v2.parquet")
-    ap.add_argument("--itviec", type=Path, default=ROOT / "data" / "crawl" / "itviec-jobs" / "itviec_v1.parquet")
+    ap.add_argument("--topcv", type=Path, default=ROOT / "data" / "crawl" / "topcv" / "topcv_20261115.parquet")
+    ap.add_argument("--itviec", type=Path, default=ROOT / "data" / "crawl" / "itviec-jobs" / "itviec_20261113.parquet")
     ap.add_argument("--out", type=Path, default=ROOT / "data" / "crawl" / "topcv" / "shared_companies.txt")
     args = ap.parse_args()
 

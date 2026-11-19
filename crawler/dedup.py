@@ -1,6 +1,6 @@
 """WM1 – phát hiện tin đăng trùng (trong một trang và giữa các trang).
 
-    uv run python -m crawler.dedup --snapshots data/crawl/topcv/topcv_v1.parquet
+    uv run python -m crawler.dedup --snapshots data/crawl/topcv/topcv_20261012.parquet
     uv run python -m crawler.dedup --snapshots <p1> <p2> --threshold 0.5 --out data/eval/dedup_candidates.csv
 
 Hai tầng, từ dễ đến khó (báo cáo cả hai):
@@ -9,7 +9,7 @@ Hai tầng, từ dễ đến khó (báo cáo cả hai):
 2. MinHash LSH trên shingle từ (n-gram 3 từ) của title + mô tả + yêu cầu: bắt tin giống nội dung
    dù tiêu đề viết khác; LSH để khỏi so từng cặp O(n²).
 
-v2 (2026-11-18, đăng ký trước trong experiments/results.md):
+Bản cắt khung (2026-11-18, đăng ký trước trong experiments/results.md):
 - `soft=True`: khóa baseline bỏ thêm từ chỉ hình thức làm việc / địa điểm ("On-site", "Remote", "Hà Nội"…),
   giữ cấp bậc. Sửa loại bỏ sót "Data Science Intern On-site" ↔ "Data Science Intern".
 - `strip=True`: bỏ **khung công ty** trước MinHash – shingle có ở ≥ 50% số tin của cùng (nguồn, công ty),
@@ -47,7 +47,7 @@ COMPANY_AFFIX_RE = re.compile(
     r"quốc tế |quoc te |đầu tư |dau tu |phát triển |phat trien |"
     r"ltd |co ltd |jsc |corp |corporation |inc |company |group |vietnam |việt nam )+"
 )
-# v2: từ không làm đổi vị trí – áp lên tiêu đề đã `norm` (nên "on-site" đã thành "on site")
+# bản cắt khung: từ không làm đổi vị trí – áp lên tiêu đề đã `norm` (nên "on-site" đã thành "on site")
 SOFT_TITLE_RE = re.compile(
     r"\b(on site|onsite|remote|hybrid|wfh|work from home|hà nội|ha noi|hanoi|hn|hồ chí minh|ho chi minh|"
     r"tp hcm|tphcm|hcm|sài gòn|saigon|đà nẵng|da nang|danang|việt nam|vietnam|tại)\b"
@@ -135,7 +135,7 @@ def shingle_sets(df: pd.DataFrame, strip: bool = False) -> dict[str, set[str]]:
 
 
 def baseline_pairs(df: pd.DataFrame, soft: bool = False) -> set[tuple[str, str]]:
-    """Cặp job_uid có cùng khóa tiêu đề + công ty (`soft=True`: khóa mềm v2)."""
+    """Cặp job_uid có cùng khóa tiêu đề + công ty (`soft=True`: khóa mềm của bản cắt khung)."""
     key = soft_title_key if soft else baseline_key
     pairs: set[tuple[str, str]] = set()
     by_key: dict[str, list[str]] = {}

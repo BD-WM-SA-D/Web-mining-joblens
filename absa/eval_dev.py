@@ -31,11 +31,11 @@ UNUSABLE = "không gán được"
 
 # Các cấu hình luật cực tính của `absa.lexicon.match_polarity`, bật dần.
 CONFIGS = [
-    ("từ điển v1 (chỉ đếm từ cảm xúc)", dict(advice=False, missing=False, tie=False)),
+    ("từ điển cơ bản (chỉ đếm từ cảm xúc)", dict(advice=False, missing=False, tie=False)),
     ("+ luật đề nghị", dict(advice=True, missing=False, tie=False)),
     ('+ luật "không có"', dict(advice=True, missing=True, tie=False)),
     ("+ luật hòa → negative", dict(advice=True, missing=False, tie=True)),
-    ("từ điển v3 (cả ba luật)", dict(advice=True, missing=True, tie=True)),
+    ("từ điển đủ luật (cả ba luật)", dict(advice=True, missing=True, tie=True)),
 ]
 
 

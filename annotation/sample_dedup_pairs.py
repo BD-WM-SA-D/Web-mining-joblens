@@ -1,7 +1,7 @@
 """Rút cặp tin để gán nhãn trùng/không trùng (WM1).
 
-    uv run python -m annotation.sample_dedup_pairs --snapshots data/crawl/topcv/topcv_v1.parquet \
-        data/crawl/itviec-jobs/itviec_v1.parquet --n 300
+    uv run python -m annotation.sample_dedup_pairs --snapshots data/crawl/topcv/topcv_20261012.parquet \
+        data/crawl/itviec-jobs/itviec_20261113.parquet --n 300
 
 Sinh trong data/annotation/ (không commit):
     dedup_batch1.labelstudio.json   nhập vào Label Studio (cấu hình: annotation/label_studio_dedup.xml)

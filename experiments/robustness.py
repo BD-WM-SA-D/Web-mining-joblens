@@ -2,7 +2,7 @@
 `experiments/results.md` ("Độ bền với nhiễu"). Chỉ đo: không chỉnh hệ, ngưỡng, từ điển hay model.
 
     uv run python -m experiments.robustness wm1
-    uv run python -m experiments.robustness wm2            # cần nhóm ml và model data/models/wm2-phobert-v3-s<N>
+    uv run python -m experiments.robustness wm2            # cần nhóm ml và model data/models/wm2-phobert-selftrain-s<N>
 
 Nhiễu tất định: cùng seed + cùng job_uid (hoặc id câu) → cùng biến đổi. Nhãn giữ nguyên vì nhiễu không đổi
 nghĩa tin. WM2 chỉ dùng biến đổi trong từng token nên số token và nhãn BIO không lệch.
@@ -83,7 +83,7 @@ def wm1(labels: Path) -> None:
     gold = [r["dup"] for r in raw]
     clean = snapshot_df()
     print(f"nhãn {labels.name}: {len(raw)} cặp, {sum(gold)} trùng; mỗi tin bị nhiễu với xác suất {RATE_WM1}")
-    print("\n| Nhiễu | baseline P/R/F1 | v1 P/R/F1 | v2 P/R/F1 | cặp có ít nhất một bản nhiễu |")
+    print("\n| Nhiễu | baseline P/R/F1 | MinHash P/R/F1 | MinHash cắt khung P/R/F1 | cặp có ít nhất một bản nhiễu |")
     print("|---|---|---|---|---|")
     for kind in ("không", *WM1_NOISE):
         if kind == "không":
@@ -100,10 +100,10 @@ def wm1(labels: Path) -> None:
         rows, _, _ = load(copy.deepcopy(raw), df)
         systems = {
             "baseline": [r["baseline"] for r in rows],
-            "v1": [r["baseline"] or r["jaccard"] >= THRESHOLD for r in rows],
-            "v2": [r["baseline_soft"] or r["jaccard_cut"] >= THRESHOLD for r in rows],
+            "minhash": [r["baseline"] or r["jaccard"] >= THRESHOLD for r in rows],
+            "minhash_cut": [r["baseline_soft"] or r["jaccard_cut"] >= THRESHOLD for r in rows],
         }
-        cells = [" / ".join(f"{x:.3f}" for x in prf(gold, systems[s])) for s in ("baseline", "v1", "v2")]
+        cells = [" / ".join(f"{x:.3f}" for x in prf(gold, systems[s])) for s in ("baseline", "minhash", "minhash_cut")]
         n_touch = sum(r["a"] in touched or r["b"] in touched for r in rows)
         print(f"| {kind} | {' | '.join(cells)} | {n_touch}/{len(rows)} |")
 
@@ -171,11 +171,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="task", required=True)
     a = sub.add_parser("wm1")
-    a.add_argument("--labels", type=Path, default=ROOT / "data" / "annotation" / "dedup_batch1.labels_v02.jsonl")
+    a.add_argument("--labels", type=Path, default=ROOT / "data" / "annotation" / "dedup_batch1.relabeled.jsonl")
     b = sub.add_parser("wm2")
     b.add_argument("--bio", type=Path, default=ROOT / "data" / "annotation" / "skill_test1.bio.jsonl")
     b.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3])
-    b.add_argument("--prefix", default="wm2-phobert-v3")
+    b.add_argument("--prefix", default="wm2-phobert-selftrain")
     args = ap.parse_args()
     if args.task == "wm1":
         wm1(args.labels)

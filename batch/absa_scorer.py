@@ -7,7 +7,7 @@
 
 Đầu vào là message `review.v1` (file JSONL của crawler) hoặc dòng `bronze.reviews_raw` (cột `payload_json`).
 Tách câu bằng `absa/split.py` như lúc gán nhãn, rồi:
-- `--stub`: từ điển `dict-v3` (macro pos/neg 0,518 trên TEST WM3).
+- `--stub`: từ điển `absa-dict` (macro pos/neg 0,518 trên TEST WM3).
 - mặc định: mô hình lai (khía cạnh từ từ điển, cực tính bằng hồi quy logistic trên tín hiệu từ điển + TF-IDF +
   phần của review), 0,590 trên TEST. Train lúc khởi động trên 200 câu dev gán tay (~3 giây), file nhãn ở
   `JOBLENS_ABSA_GOLD_DIR` (mặc định `data/annotation/`). **Đọc kèm kết quả:** luật một dòng theo phần của review

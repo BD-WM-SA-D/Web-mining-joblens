@@ -2,7 +2,7 @@
 
     uv sync --group ml
     uv run python -m ie.phobert train --seed 1                       # train + chấm dev, ghi experiments/runs/*.json
-    uv run python -m ie.phobert eval --model data/models/wm2-phobert-s1 --bio data/annotation/skill_test1.bio.jsonl \
+    uv run python -m ie.phobert eval --model data/models/wm2-phobert-tag-s1 --bio data/annotation/skill_test1.bio.jsonl \
         --eval-set skill_test1 --split test
 
 - PhoBERT cần đầu vào đã tách từ (âm tiết nối bằng "_"): tách bằng underthesea trên token gốc (TOKEN_RE), mỗi "đơn vị"
@@ -237,7 +237,7 @@ def train(args) -> None:
     sched = get_linear_schedule_with_warmup(opt, int(0.1 * steps), steps)
     scaler = torch.amp.GradScaler(enabled=device.type == "cuda")
 
-    name = "wm2-phobert" + ("" if args.weak == "v1" else f"-{args.weak}") + (f"-{args.tag}" if args.tag else "")
+    name = f"wm2-phobert-{args.weak}" + (f"-{args.tag}" if args.tag else "")
     out_dir = MODELS / f"{name}-s{args.seed}"
     best, best_res = -1.0, None
     for ep in range(args.epochs):
@@ -289,7 +289,7 @@ def train(args) -> None:
             task="WM2",
             rq="RQ3",
             method=method_name(method, args),
-            baseline_of="dict-alias-v0",
+            baseline_of="dict-alias",
             eval_set="skill_batch1",
             split="dev",
             metrics=m,
@@ -328,7 +328,7 @@ def eval_cmd(args) -> None:
                 task="WM2",
                 rq="RQ3",
                 method=method_name(method, args),
-                baseline_of="dict-alias-v0",
+                baseline_of="dict-alias",
                 eval_set=args.eval_set,
                 split=args.split,
                 metrics=m,
@@ -342,7 +342,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     t = sub.add_parser("train")
-    t.add_argument("--weak", default="v1", help="phiên bản nhãn yếu (v1, v2…)")
+    t.add_argument("--weak", default="tag", help="bộ nhãn yếu: tag, rules, selftrain, globaltag, llm")
     t.add_argument("--train", type=Path, help="mặc định data/weak/wm2_weak_<weak>.bio.jsonl")
     t.add_argument("--dev", type=Path, default=DEV)
     t.add_argument("--seed", type=int, default=1)
@@ -353,9 +353,9 @@ def main() -> None:
     t.add_argument("--max-len", type=int, default=256)
     t.add_argument("--o-weight", type=float, default=1.0, help="hệ số loss cho token nhãn O (mặc định 1 = như cũ)")
     t.add_argument("--base", default=BASE, help="mô hình gốc: tên Hugging Face hoặc thư mục (vd bản DAPT)")
-    t.add_argument("--tag", help="hậu tố tên model và tên phương pháp, vd dapt → wm2-phobert-v3-dapt-s1")
+    t.add_argument("--tag", help="hậu tố tên model và tên phương pháp, vd dapt → wm2-phobert-selftrain-dapt-s1")
     e = sub.add_parser("eval")
-    e.add_argument("--weak", default="v1", help="phiên bản nhãn yếu model đã train, để ghi vào run")
+    e.add_argument("--weak", default="tag", help="bộ nhãn yếu model đã train, để ghi vào run")
     e.add_argument("--model", type=Path, required=True)
     e.add_argument("--bio", type=Path, default=DEV)
     e.add_argument("--max-len", type=int, default=256)

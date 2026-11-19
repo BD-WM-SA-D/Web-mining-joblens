@@ -1,6 +1,6 @@
 """WM3 – nhãn yếu cho câu review (dùng để pre-train / tiền gán, KHÔNG dùng làm tập test).
 
-    uv run python -m absa.weak_labels --out data/absa/weak_v1.jsonl
+    uv run python -m absa.weak_labels --out data/absa/weak_stars.jsonl
 
 Quy tắc (AGENTS.md: nhãn yếu không được làm tập test):
 
@@ -29,7 +29,7 @@ from pathlib import Path
 from absa.lexicon import ASPECTS, match_aspects
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "aspect-dict+stars-v1"
+VERSION = "aspect-dict+stars"
 STAR_POS, STAR_NEG = 4.0, 2.0
 SECTION_POLARITY = {"liked": "positive", "improvement": "negative"}
 # khía cạnh ITviec KHÔNG cho điểm sao → nhãn yếu chỉ dựa vào phần của review
@@ -69,7 +69,7 @@ def weak_label(sent: dict) -> list[dict]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sentences", type=Path, default=ROOT / "data" / "absa" / "sentences.jsonl")
-    ap.add_argument("--out", type=Path, default=ROOT / "data" / "absa" / "weak_v1.jsonl")
+    ap.add_argument("--out", type=Path, default=ROOT / "data" / "absa" / "weak_stars.jsonl")
     args = ap.parse_args()
 
     sents = [json.loads(ln) for ln in args.sentences.read_text(encoding="utf-8").splitlines() if ln.strip()]
