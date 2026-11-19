@@ -3,6 +3,7 @@
     uv run python -m graph.analyze rank   --graph data/graph/skill_graph_dict.json
     uv run python -m graph.analyze cluster --graph data/graph/skill_graph_dict.json
     uv run python -m graph.analyze stability
+    uv run python -m graph.analyze compare --other data/graph/skill_graph_vietjobs.json
 
 Ba mốc bắt buộc, vì cả PageRank lẫn modularity đều **tự nó không nói gì**:
 
@@ -214,6 +215,60 @@ def cmd_stability(args) -> None:
     )
 
 
+# ---------- 4. cụm có lặp lại trên một kho tin khác không ----------
+
+
+def cmd_compare(args) -> None:
+    """So hai đồ thị dựng từ hai kho tin khác nhau (vd crawl và VietJobs): phân hoạch và thứ hạng phổ biến."""
+    from scipy.stats import spearmanr
+    from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
+
+    raw = [load(args.graph), load(args.other)]
+    pruned = [prune_npmi(g, args.min_npmi) if args.min_npmi is not None else g for g in raw]
+    parts = [louvain(g, args.weight, args.resolution, SEED) for g in pruned]
+    for name, g, h, pt in zip((args.graph.name, args.other.name), raw, pruned, parts, strict=True):
+        print(
+            f"{name}: {g.graph['n_jobs']} tin, {g.number_of_nodes()} đỉnh; sau lọc {h.number_of_nodes()} đỉnh, {len(pt)} cụm"
+        )
+
+    common = sorted(set(pruned[0]) & set(pruned[1]))
+    a, b = labels(pruned[0], parts[0], common), labels(pruned[1], parts[1], common)
+    nmi, ari = normalized_mutual_info_score(a, b), adjusted_rand_score(a, b)
+    rnd = random.Random(SEED)
+    null = []
+    for _ in range(200):
+        shuf = b[:]
+        rnd.shuffle(shuf)
+        null.append(normalized_mutual_info_score(a, shuf))
+    print(
+        f"\nphân hoạch trên {len(common)} đỉnh chung: NMI {nmi:.3f} / ARI {ari:.3f} (mốc xáo ngẫu nhiên NMI {sum(null) / len(null):.3f})"
+    )
+
+    shared = sorted(set(raw[0]) & set(raw[1]))
+    df = [[g.nodes[x]["df"] / g.graph["n_jobs"] for x in shared] for g in raw]
+    rho = spearmanr(df[0], df[1]).statistic
+    tops = [set(sorted(g, key=lambda x: -g.nodes[x]["df"])[: args.top]) for g in raw]
+    print(
+        f"thứ hạng số tin trên {len(shared)} đỉnh chung: Spearman {rho:.3f}; top-{args.top} chung {len(tops[0] & tops[1])}/{args.top}"
+    )
+    print(f"  chỉ có ở top {args.graph.name}: {', '.join(sorted(tops[0] - tops[1]))}")
+    print(f"  chỉ có ở top {args.other.name}: {', '.join(sorted(tops[1] - tops[0]))}")
+
+    # mỗi cụm của đồ thị thứ nhất rơi vào cụm nào của đồ thị thứ hai
+    print("\n| Cụm (đồ thị 1) | Kỹ năng nhiều tin nhất | Phần lớn nằm ở cụm (đồ thị 2) | Tỉ lệ |")
+    print("|---|---|---|---|")
+    m2 = {x: i for i, part in enumerate(sorted(parts[1], key=len, reverse=True), 1) for x in part}
+    g0 = pruned[0]
+    for i, part in enumerate(sorted(parts[0], key=len, reverse=True), 1):
+        inside = [m2[x] for x in part if x in m2]
+        top = ", ".join(sorted(part, key=lambda x: -g0.nodes[x]["df"])[:6])
+        if not inside:
+            print(f"| {i} | {top} | – | 0/{len(part)} |")
+            continue
+        best = max(set(inside), key=inside.count)
+        print(f"| {i} | {top} | {best} | {inside.count(best)}/{len(inside)} |")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -232,6 +287,14 @@ def main() -> None:
             p.add_argument("--min-df", type=int, default=3)
             p.add_argument("--min-weight", type=int, default=2)
         p.set_defaults(fn=fn)
+    c = sub.add_parser("compare", help="so hai đồ thị từ hai kho tin khác nhau")
+    c.add_argument("--graph", type=Path, default=ROOT / "data" / "graph" / "skill_graph_dict.json")
+    c.add_argument("--other", type=Path, required=True)
+    c.add_argument("--weight", default="weight", choices=["weight", "npmi"])
+    c.add_argument("--resolution", type=float, default=1.0)
+    c.add_argument("--min-npmi", type=float, default=0.3)
+    c.add_argument("--top", type=int, default=20)
+    c.set_defaults(fn=cmd_compare)
     args = ap.parse_args()
     args.fn(args)
 

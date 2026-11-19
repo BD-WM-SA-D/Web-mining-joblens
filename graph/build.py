@@ -2,6 +2,7 @@
 
     uv run python -m graph.build --extractor dict
     uv run python -m graph.build --extractor phobert --model data/models/wm2-phobert-v3-s1
+    uv run python -m graph.build --snapshots data/vietjobs/it_v1.parquet --no-tags         --out data/graph/skill_graph_vietjobs.json      # đối chiếu trên kho tin khác (VietJobs)
 
 Đỉnh là một kỹ năng (đã chuẩn hóa về `canonical` của `ie/resources/skill_alias.csv`), cạnh nối hai
 kỹ năng cùng xuất hiện trong một tin. Đây là bài WM6 **tiêu thụ đầu ra của WM2**: chất lượng đồ thị
@@ -54,12 +55,12 @@ def job_text(row: dict) -> str:
     return "\n".join(str(row.get(f) or "") for f in TEXT_FIELDS)
 
 
-def extract_dict(rows: list[dict], catalog: SkillCatalog) -> dict[str, set[str]]:
-    """job_uid → tập nhãn kỹ năng, khớp từ điển trên toàn văn + tag nhà tuyển dụng."""
+def extract_dict(rows: list[dict], catalog: SkillCatalog, use_tags: bool = True) -> dict[str, set[str]]:
+    """job_uid → tập nhãn kỹ năng, khớp từ điển trên toàn văn + tag nhà tuyển dụng (nếu `use_tags`)."""
     out = {}
     for r in rows:
         labels = {s.label for *_, s in catalog.extract(job_text(r))}
-        tags = r.get("skill_tags")
+        tags = r.get("skill_tags") if use_tags else None
         for tag in [] if tags is None else tags:
             skill = catalog.lookup(str(tag).strip())
             if skill:
@@ -190,6 +191,12 @@ def load_rows(paths: list[Path], collapse_dup: bool) -> list[dict]:
     frames = [pd.read_parquet(p) for p in paths if p.exists()]
     if not frames:
         raise SystemExit(f"không có snapshot nào trong {[str(p) for p in paths]}")
+    # VietJobs (`data/vietjobs/it_v1.parquet`) đặt tên cột khác và không có tag nhà tuyển dụng; cột
+    # `technical_skills` của nó do LLM sinh nên KHÔNG dùng thay `skill_tags`.
+    frames = [
+        f.rename(columns={"job_title": "title"}).assign(source="vietjobs") if "job_title" in f.columns else f
+        for f in frames
+    ]
     df = pd.concat(frames, ignore_index=True)
     if collapse_dup:
         from crawler.dedup import baseline_key
@@ -207,6 +214,7 @@ def main() -> None:
     ap.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "wm2-phobert-v3-s1")
     ap.add_argument("--snapshots", type=Path, nargs="+", default=SNAPSHOTS)
     ap.add_argument("--collapse-dup", action="store_true", help="gộp tin cùng tiêu đề+công ty (thử độ bền)")
+    ap.add_argument("--no-tags", action="store_true", help="bỏ tag nhà tuyển dụng, chỉ khớp từ điển trên văn bản")
     ap.add_argument("--min-df", type=int, default=MIN_DF)
     ap.add_argument("--min-weight", type=int, default=MIN_WEIGHT)
     ap.add_argument("--out", type=Path, default=None)
@@ -215,7 +223,7 @@ def main() -> None:
     rows = load_rows(args.snapshots, args.collapse_dup)
     catalog = SkillCatalog()
     if args.extractor == "dict":
-        job_skills = extract_dict(rows, catalog)
+        job_skills = extract_dict(rows, catalog, use_tags=not args.no_tags)
     else:
         job_skills = extract_phobert(rows, catalog, args.model)
     g = cooccurrence(job_skills, args.min_df, args.min_weight)
