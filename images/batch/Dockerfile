@@ -16,7 +16,8 @@
 #   docker run --rm --env-file .env joblens/job-dedup:$V-stub \
 #       --input-table silver.job_postings --output-table silver.job_dedup --run-id manual-1
 #
-# CHƯA build thử (2026-11-18: Docker Desktop trên máy WM chưa bật). Lần build đầu cần kiểm tra lại.
+# 2026-11-18: đã build và chạy thử bản stub của cả ba trên file cục bộ (eaee9db). Bản full cũng
+# đã build; lần đầu nặng 11,7 GB vì kéo theo gói CUDA, nay đã lọc bỏ.
 
 FROM ghcr.io/astral-sh/uv:0.12.0 AS uv
 
@@ -32,7 +33,9 @@ RUN uv export --frozen --no-dev --no-default-groups --group lakehouse --no-hashe
 FROM deps-stub AS deps-full
 # torch bản CPU (uv.lock trỏ bản CUDA cho máy dev có GPU – quá nặng và vô ích trong pod CPU)
 ARG TORCH_VERSION=2.11.0
-RUN uv export --frozen --only-group ml --no-emit-package torch --no-hashes -o /tmp/ml.txt \
+# --no-emit-package torch vẫn để lại các gói CUDA mà torch kéo theo (nvidia-*, triton, cuda-*: ~5 GB) → lọc bỏ
+RUN uv export --frozen --only-group ml --no-emit-package torch --no-hashes \
+  | grep -v -i -E '^(nvidia|triton|cuda)' > /tmp/ml.txt \
  && uv pip install --system --no-cache torch==${TORCH_VERSION} --index-url https://download.pytorch.org/whl/cpu \
  && uv pip install --system --no-cache -r /tmp/ml.txt
 
