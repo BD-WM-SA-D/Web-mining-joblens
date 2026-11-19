@@ -134,7 +134,7 @@ Ràng buộc của bước ④ (đều nằm trong code, không chỉ là quy ư
  │      bản stub: khớp từ điển alias, conf 0,9                            │
  │ 3. span → skill_id: ESCO URI nếu từ điển có, không thì joblens:<slug> │
  │ 4. bỏ trùng theo (job_uid, field, span_start, span_end)               │
- │ 5. model_version = tag image (x.y.z-gitsha), run_id do Airflow truyền │
+ │ 5. extractor_version = tag image (x.y.z-gitsha), run_id từ Airflow    │
  └─────────────────────────────────────────────────────────────────────┘
         │  ghi đè có điều kiện theo job_uid của lô (một giao dịch Iceberg)
         ▼
@@ -154,7 +154,7 @@ Ràng buộc của bước ④ (đều nằm trong code, không chỉ là quy ư
 | Thay đổi | Ảnh hưởng | Ai làm |
 |---|---|---|
 | Model mới (nhãn yếu LLM), cùng kiến trúc PhoBERT-base | Hợp đồng chạy, schema bảng, tài nguyên pod không đổi | – |
-| Tag image `0.2.0-<gitsha>` | Đổi tag trong DAG; thêm dòng `deploy/compat.md` | Big Data |
+| Tag image `0.2.0-93cf4cb` (bản stub: `0.2.0-93cf4cb-stub`) | Đổi tag trong DAG; thêm dòng `deploy/compat.md`. Cột `extractor_version` của `silver.job_skills` ghi `0.2.0-93cf4cb` | Big Data |
 | Recall tăng 0,54 → 0,73 | Mỗi tin ra nhiều kỹ năng hơn; số đếm ở gold/mart tăng. Không phải lỗi pipeline | Big Data, PTTKHT nên biết |
 | `mining-service` | Không đổi (vẫn stub); `model_version` trả về là `stub-dict-alias` | – |
 | Bước làm nhãn gọi API LLM | Chỉ ở máy WM lúc train; ghi trong `joblens/docs/project-plan/02-du-lieu.md` | – |

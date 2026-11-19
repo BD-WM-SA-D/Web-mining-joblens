@@ -13,7 +13,7 @@
 models:
   - name: skill-extractor
     version: 0.2.0
-    image: joblens/skill-extractor:0.2.0-<gitsha> (bản full, torch CPU; bản stub là từ điển)
+    image: joblens/skill-extractor:0.2.0-93cf4cb (bản full, torch CPU; bản stub từ điển 0.2.0-93cf4cb-stub)
     s3_path: <chưa đẩy – model nằm ở data/models/skill-extractor/ (không commit)>
     train_snapshot: >
       nhãn yếu do LLM gán theo guideline gán nhãn kỹ năng 0.4 cho câu VietJobs (chỉ gửi câu VietJobs,

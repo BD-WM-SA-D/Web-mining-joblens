@@ -58,6 +58,7 @@
 - [x] `ie/llm_label.py`, `ie/weak_llm.py`; đăng ký trước và kết quả trong `experiments/results.md`.
 - [x] Build image 0.2.0 bản full, chạy thử cục bộ; cập nhật `models.yaml`, `NHAT-KY.md`.
 - [x] Ghi luồng dữ liệu mới vào `joblens/docs/project-plan/02-du-lieu.md`, `04-…`, `13-…` (nhánh `docs/wm2-nhan-yeu-llm`, chờ PR).
-- [ ] Gắn tag `0.2.0-<gitsha>` sau khi commit; báo Big Data đổi tag trong DAG và ghi `deploy/compat.md`.
+- [x] Build image `joblens/skill-extractor:0.2.0-93cf4cb` (full) và `0.2.0-93cf4cb-stub`, chạy thử cục bộ.
+- [ ] Báo Big Data đổi tag trong DAG và ghi `deploy/compat.md`.
 - [ ] Đẩy file nhãn LLM và model lên `s3://joblens/…`.
 - [ ] Đo thời gian chạy bản full trên CPU cho 50.000 tin: `<chưa đo>`.
