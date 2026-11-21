@@ -2607,3 +2607,28 @@ image bản full (21,7 kỹ năng/tin sau khi quy về tên chuẩn), đưa vào
 
 (Recall@10 / nDCG@10.) Trùng kỹ năng tốt hơn khi dùng kỹ năng WM2, đuổi kịp TF-IDF; chưa có khoảng tin cậy và
 vẫn là log synthetic (người dùng ảo sinh từ tag), nên chỉ là số phụ. Số WM5 chính thức không đổi.
+
+## Việc ngày 2026-11-21
+
+### WM5 – trùng kỹ năng so qua từ điển alias
+
+- **Lỗi:** `content-skill` so kỹ năng theo đúng mặt chữ (chỉ hạ chữ thường). Hồ sơ ghi "React" không khớp tin ghi
+  "ReactJS"/"React.js"; trong 304 tin `topcv_20261012`, WM2 trả "reactjs" ở 18 tin, "nextjs" ở 7 tin. Với hồ sơ
+  người viết, phương pháp này bị đánh giá thấp oan.
+- **Sửa:** cả kỹ năng hồ sơ lẫn kỹ năng tin được đưa về tên chuẩn qua từ điển alias (cùng danh mục với
+  mining-service) trước khi so; tên không có trong từ điển giữ chữ thường. Sửa trước khi tạo phiếu chấm tay, chưa
+  có điểm chấm nào.
+- **Log synthetic, chạy lại:** `content-skill` nDCG@10 0,058 → **0,057** (Recall@10 0,069 giữ nguyên); dùng kỹ
+  năng WM2: 0,070 → 0,068. Gần như không đổi vì người dùng ảo sinh từ chính tag của tin, nên vốn không lệch tên.
+  Các chiến lược khác không đổi. Lệnh: `uv run python -m recsys.baseline --eval-set reco_synthetic`.
+
+### WM5 – chọn hồ sơ chấm tay
+
+- Từ 30 hồ sơ nháp giữ **20**, bỏ 10 hồ sơ snapshot gần như không có tin phù hợp hoặc trùng nhóm: an ninh ứng dụng
+  (0–3 tin có kỹ năng trùng), game designer, Flutter, blockchain, helpdesk, iOS, SAP/ERP ("Tư vấn triển khai"
+  không phải kỹ năng), kiểm thử hiệu năng (đã có hai hồ sơ tester), game Unity, quản trị mạng.
+- Chọn **trước khi xem gợi ý**, chỉ dựa trên số tin có ít nhất một kỹ năng trùng (không dựa trên thứ hạng).
+- Ước khối lượng chấm: 20 hồ sơ × 4 phương pháp × top-10, gộp tin trùng: **~500 dòng** (kỹ năng tin từ WM2).
+- **Đã tạo phiếu chấm (2026-11-21):** 20 hồ sơ (sha256 `8be17e871c62fbb0…`), kỹ năng tin lấy từ WM2, snapshot
+  `topcv_20261012`, seed 20261120 → **503 dòng**. Từ đây không sửa hồ sơ. Lệnh:
+  `uv run python -m recsys.judge_kit make --profiles data/eval/wm5_profiles.csv --skills data/eval/wm5_skills_wm2.jsonl`.

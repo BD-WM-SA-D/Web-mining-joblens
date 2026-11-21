@@ -110,3 +110,14 @@ def test_log_synthetic_khong_don_luot_xem_vao_ngay_cuoi():
     assert last <= "2026-10-10"
     share_last = collections.Counter(e["event_ts"] for e in events)[last] / len(events)
     assert share_last < 0.3
+
+
+def test_content_skill_khop_qua_alias():
+    """Hồ sơ ghi "React", tin ghi "ReactJS"/"React.js": cùng một kỹ năng theo từ điển alias."""
+    from recsys.baseline import canon_skill
+
+    assert canon_skill("React") == canon_skill("React.js") == canon_skill("reactjs") == "reactjs"
+    assert canon_skill("Kỹ năng lạ không có") == "kỹ năng lạ không có"
+    skills = {"j1": ["ReactJS"], "j2": ["Vue"]}
+    scores = score_content_skill(["React"], skills, idf_weights(skills))
+    assert scores["j1"] > 0 and scores["j2"] == 0

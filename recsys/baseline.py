@@ -5,7 +5,9 @@
 
 Chiến lược:
 - `popularity`  : xếp hạng theo số lượt xem trong phần train (không cá nhân hóa) – BASELINE.
-- `content-skill`: trùng kỹ năng giữa hồ sơ người dùng và kỹ năng của tin (Jaccard có trọng số IDF).
+- `content-skill`: trùng kỹ năng giữa hồ sơ người dùng và kỹ năng của tin (Jaccard có trọng số IDF). Hai phía
+  đều được đưa về tên chuẩn qua từ điển alias trước khi so ("React", "React.js" → ReactJS); tên không có trong
+  từ điển thì so theo chữ thường.
 - `content-tfidf`: cosine giữa hồ sơ (ghép kỹ năng thành câu) và văn bản tin, TF-IDF n-gram từ.
 - `hybrid`      : content-tfidf + 0,1 × điểm phổ biến đã chuẩn hóa.
 
@@ -22,6 +24,7 @@ import argparse
 import json
 import math
 from collections import Counter, defaultdict
+from functools import cache
 from pathlib import Path
 
 import pandas as pd
@@ -66,6 +69,21 @@ def split_time(events: list[dict], test_frac: float) -> tuple[list[dict], list[d
     return [e for e in events if e["event_ts"] < cut], [e for e in events if e["event_ts"] >= cut]
 
 
+@cache
+def _catalog():
+    from service.skills import SkillCatalog
+
+    return SkillCatalog()
+
+
+@cache
+def canon_skill(name: str) -> str:
+    """Tên kỹ năng → tên chuẩn (chữ thường) theo từ điển alias; không có trong từ điển thì giữ chữ thường."""
+    name = name.strip()
+    hit = _catalog().lookup(name)
+    return (hit.label if hit else name).lower()
+
+
 def job_skills(df: pd.DataFrame, spans_path: Path | None) -> dict[str, list[str]]:
     """job_uid → danh sách kỹ năng (tag nhà tuyển dụng, hoặc span WM2 nếu có file)."""
     if spans_path:
@@ -73,12 +91,12 @@ def job_skills(df: pd.DataFrame, spans_path: Path | None) -> dict[str, list[str]
         for line in spans_path.read_text(encoding="utf-8").splitlines():
             if line:
                 r = json.loads(line)
-                out[r["job_uid"]].extend(r.get("skills", []))
+                out[r["job_uid"]].extend(canon_skill(x) for x in r.get("skills", []) if x.strip())
         return {k: sorted(set(v)) for k, v in out.items()}
     out = {}
     for r in df.to_dict("records"):
         tags = r.get("skill_tags")
-        out[r["job_uid"]] = [str(t).strip().lower() for t in tags if str(t).strip()] if tags is not None else []
+        out[r["job_uid"]] = sorted({canon_skill(str(t)) for t in tags if str(t).strip()}) if tags is not None else []
     return out
 
 
@@ -104,10 +122,10 @@ def idf_weights(skills_by_job: dict[str, list[str]]) -> dict[str, float]:
 
 
 def score_content_skill(profile: list[str], skills_by_job: dict[str, list[str]], idf: dict[str, float]) -> dict:
-    p = {s.lower() for s in profile}
+    p = {canon_skill(s) for s in profile if s.strip()}
     out = {}
     for j, sk in skills_by_job.items():
-        js = {s.lower() for s in sk}
+        js = {canon_skill(s) for s in sk}
         inter = p & js
         union = p | js
         out[j] = sum(idf.get(s, 1.0) for s in inter) / (len(union) or 1)
