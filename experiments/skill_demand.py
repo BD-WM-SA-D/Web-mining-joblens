@@ -2,7 +2,7 @@
 
     uv run python -m experiments.skill_demand                      # từ điển, corpus tự crawl + VietJobs IT
     uv run python -m experiments.skill_demand --all-categories     # thêm VietJobs đủ 48.092 tin (đọc CSV 103 MB)
-    uv run python -m experiments.skill_demand --extractor phobert --model data/models/wm2-phobert-selftrain-s1
+    uv run python -m experiments.skill_demand --extractor phobert --model data/models/skill-extractor
 
 Đề tài đã đăng ký là *"Mining Vietnamese Job Postings for Skill Demand"*, nhưng `results.md` chỉ có số
 chất lượng mô hình, chưa có bảng nào về **nhu cầu**. Script này sinh bốn bảng đó. Không cần gán nhãn,
@@ -238,7 +238,7 @@ def load_crawl(collapse_dup: bool) -> dict[str, list[dict]]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--extractor", choices=["dict", "phobert"], default="dict")
-    ap.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "wm2-phobert-selftrain-s1")
+    ap.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "skill-extractor")
     ap.add_argument("--top", type=int, default=30)
     ap.add_argument("--top-distinctive", type=int, default=6)
     ap.add_argument("--min-jobs", type=int, default=20, help="nhóm dưới ngưỡng này không in (số quá nhỏ)")

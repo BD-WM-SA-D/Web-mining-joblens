@@ -1,7 +1,7 @@
 """WM6 – dựng đồ thị đồng xuất hiện kỹ năng từ tin tuyển dụng đã crawl.
 
     uv run python -m graph.build --extractor dict
-    uv run python -m graph.build --extractor phobert --model data/models/wm2-phobert-selftrain-s1
+    uv run python -m graph.build --extractor phobert --model data/models/skill-extractor
     uv run python -m graph.build --snapshots data/vietjobs/vietjobs_it.parquet --no-tags         --out data/graph/skill_graph_vietjobs.json      # đối chiếu trên kho tin khác (VietJobs)
 
 Đỉnh là một kỹ năng (đã chuẩn hóa về `canonical` của `ie/resources/skill_alias.csv`), cạnh nối hai
@@ -211,7 +211,7 @@ def load_rows(paths: list[Path], collapse_dup: bool) -> list[dict]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--extractor", choices=["dict", "phobert"], default="dict")
-    ap.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "wm2-phobert-selftrain-s1")
+    ap.add_argument("--model", type=Path, default=ROOT / "data" / "models" / "skill-extractor")
     ap.add_argument("--snapshots", type=Path, nargs="+", default=SNAPSHOTS)
     ap.add_argument("--collapse-dup", action="store_true", help="gộp tin cùng tiêu đề+công ty (thử độ bền)")
     ap.add_argument("--no-tags", action="store_true", help="bỏ tag nhà tuyển dụng, chỉ khớp từ điển trên văn bản")

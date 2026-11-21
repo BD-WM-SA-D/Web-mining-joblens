@@ -500,6 +500,42 @@ Lệnh:
     uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-llm \
         --out data/eval/skill_test1_preds_llm.json --against data/eval/skill_test1_preds_selftrain.json
 
+## Self-training trên nhãn LLM – đăng ký trước (2026-11-20, ghi TRƯỚC khi chạy)
+
+Câu TopCV trong tập train (3.485 câu) không được gửi ra API nên vẫn mang nhãn self-training cũ. Thử dùng chính
+mô hình nhãn LLM để bổ sung nhãn, không gửi dữ liệu nào ra ngoài.
+
+- Ba mô hình nhãn LLM (seed 1–3) đoán lại toàn bộ câu train; span nào **cả ba cùng đoán**, không chồng span sẵn có
+  và không bị luật guideline 0.4 loại thì được thêm vào nhãn (cách self-training đã dùng trước đây, không bỏ span nào).
+  Bộ nhãn mới gọi là `llmself`.
+- Train PhoBERT công thức chuẩn (lr 3e-5, 3 epoch, bs 16, neg_ratio 0,3, hệ số O 1), seed 1–3, chọn epoch theo dev.
+- Chỉ chấm TEST nếu dev trung bình > 0,797 (mức của mô hình nhãn LLM). Chấm `skill_test1` một lần, so ghép cặp với
+  mô hình nhãn LLM cùng seed (bootstrap theo tin, 1.000 lần).
+- "Tốt hơn" chỉ khi CI95 của ΔF1 > 0 ở cả 3 seed; khi đó image đổi. Không thì giữ image 0.2.0.
+- Dự đoán: dev +0,00 đến +0,01; nhiều khả năng không qua ngưỡng dev hoặc "không khác biệt" trên TEST, vì nhãn LLM đã
+  bắt phần lớn kỹ năng (lần self-training trước chỉ thêm 0,002 dev).
+
+### Kết quả self-training trên nhãn LLM (2026-11-20, chạy và chấm TEST một lần theo đăng ký trên)
+
+- Ba mô hình nhãn LLM cùng đoán thêm **2.259 span** (24.144 câu train; 9.974 câu có kỹ năng). Span thêm nhiều nhất:
+  AI (39), ERP (26), quản lý dự án (19), thiết kế hình ảnh (19), UI (18).
+- Dev: 0,811 / 0,821 / 0,804, **trung bình 0,812** > 0,797 → đem sang TEST theo đăng ký.
+
+| Seed | TEST P | TEST R | TEST F1 | F1 mô hình nhãn LLM | ΔF1 (CI95, bootstrap theo tin) |
+|---|---|---|---|---|---|
+| 1 | 0,724 | 0,734 | 0,729 | 0,729 | +0,000 [−0,012; +0,012] |
+| 2 | 0,735 | 0,743 | 0,739 | 0,727 | +0,013 [+0,001; +0,025] |
+| 3 | 0,728 | 0,744 | 0,736 | 0,734 | +0,002 [−0,013; +0,017] |
+
+- **Kết luận theo quy tắc đã đăng ký: không tốt hơn** (CI chứa 0 ở seed 1 và 3). Trung bình 0,735 so với 0,730.
+  Image giữ 0.2.0. Đúng dự đoán: dev tăng nhẹ, TEST gần như không đổi.
+- Thêm span đồng thuận chủ yếu là từ chung ("AI", "UI") – đúng loại mà phân tích lỗi cho thấy mô hình đã hay báo
+  thừa, nên không giúp precision.
+
+Lệnh: `bash data/logs/run_llmself.sh` (self_train `--src llm --dst llmself` + train 3 seed);
+`uv run python -m ie.phobert eval --weak llmself --model data/models/wm2-phobert-llmself-s<N> --bio data/annotation/skill_test1.bio.jsonl --eval-set skill_test1 --split test --seed <N>`;
+`uv run python -m experiments.paired_wm2 --bio data/annotation/skill_test1.bio.jsonl --prefix wm2-phobert-llmself --out data/eval/skill_test1_preds_llmself.json --against data/eval/skill_test1_preds_llm.json`
+
 ## Dữ liệu
 
 > Dữ liệu chính là tin tự crawl (TopCV, ITviec). VietJobs chỉ dùng cho nhãn yếu, từ điển alias và baseline – không dùng làm tập test.
@@ -2439,3 +2475,135 @@ So với sự cố 12/10 (429 đến sau khoảng 800 request thành công, ở 
 - Hôm nay không chạm TopCV nữa (quy tắc: gặp 429 là dừng, không chạy lại trong ngày).
 
 Lệnh: `uv run python -m crawler.topcv.run --max-sitemaps 60 --max-jobs 400`; log `data/logs/topcv_2026-11-18.log`
+
+## Việc ngày 2026-11-20
+
+### WM2 – phân tích lỗi mô hình nhãn LLM trên TEST (đã chấm, không dùng để chỉnh)
+
+Đếm trên dự đoán đã lưu khi chấm TEST một lần (1.149 span vàng). "Lệch ranh giới" = span đoán chồng lên span
+vàng nhưng không khớp đúng hai đầu.
+
+| Hệ | F1 strict | F1 partial | Đúng | Lệch ranh giới | Bỏ sót | Báo thừa |
+|---|---|---|---|---|---|---|
+| Từ điển alias | 0,442 | 0,525 | 362 | 68 | 719 | 58 |
+| PhoBERT nhãn LLM, seed 1 | 0,729 | 0,811 | 852 | 97 | 200 | 241 |
+| PhoBERT nhãn LLM, seed 2 | 0,727 | 0,806 | 837 | 92 | 220 | 226 |
+| PhoBERT nhãn LLM, seed 3 | 0,734 | 0,814 | 842 | 92 | 215 | 211 |
+
+- Khoảng 8 điểm F1 mất vì ranh giới. Phần lớn là cụm động từ + đối tượng mà guideline tính cả cụm ("Xây dựng
+  kịch bản kiểm thử" → đoán "Xây dựng"; "thiết kế UI / UX" → "UI / UX"), hoặc cụm tiếng Anh bị cắt/thừa một từ
+  ("prototypes" → "prototypes and").
+- Báo thừa nhiều nhất là các từ chung chung mà guideline không coi là kỹ năng khi đứng một mình: "AI" (12),
+  "trải nghiệm người dùng" (6), "DevOps" (5), "cloud" (4). Bỏ sót nhiều nhất là từ viết tắt và thuật ngữ mới:
+  "UAT" (5), "monitoring" (3), "RAG", "agent", "Codex".
+- Báo thừa nay nhiều hơn bỏ sót (241 so với 200, seed 1); với từ điển thì ngược hẳn (58 so với 719).
+
+### WM2 – độ ổn định của nhãn LLM giữa hai lần gán
+
+Gán lại 300 câu dev bằng đúng cấu hình cũ (`gpt-6-luna`, cùng prompt, cùng guideline), chi phí ~$0,007.
+
+| | P | R | F1 so với nhãn tay |
+|---|---|---|---|
+| Lần 1 (dùng để chọn mô hình LLM) | 0,864 | 0,834 | 0,849 |
+| Lần 2 | 0,797 | 0,828 | 0,812 |
+
+- Hai lần gán đồng thuận F1 0,878; 258/300 câu ra nhãn giống hệt. Chất lượng dao động ~0,04 F1 giữa hai lần
+  gán, chủ yếu ở precision. Con số 0,849 đã báo nên đọc là "khoảng 0,81–0,85".
+- Bộ nhãn train dùng lần gán duy nhất của nó; chưa đo ảnh hưởng của dao động này lên mô hình.
+
+Lệnh: `uv run python -m ie.llm_label --model gpt-6-luna --bio data/annotation/skill_batch1.bio.jsonl --name dev_luna_rerun --eval`
+
+### WM2 – tốc độ trên CPU
+
+Bản full (PhoBERT) trên 352 tin TopCV, chạy trực tiếp trên máy dev (i7-11800H), tắt GPU, giới hạn 2 luồng
+torch: **157 giây, tức ~0,45 giây/tin**, ra 10.110 dòng kỹ năng. Ước cho 50.000 tin: ~6,2 giờ với 2 CPU, chia
+được theo lô để chạy song song. Lúc đo máy đang train mô hình khác trên GPU nên số này hơi bi quan. Chưa đo
+được trong container (Docker Desktop không phản hồi giữa chừng).
+
+### WM1 – tỷ lệ tin đăng lặp trên dữ liệu hiện có
+
+Chạy hệ MinHash cắt khung (hệ đã chấm, không chỉnh gì) trên toàn bộ 888 tin: TopCV `topcv_20261118` (352) +
+ITviec `itviec_20261113` (536).
+
+- 17 nhóm trùng (34 tin), tức **17 tin thừa = 1,9%** số tin. Trong đó 5 nhóm là trùng **giữa hai trang**,
+  12 nhóm trùng trong cùng một trang (TopCV 3, ITviec 9).
+- Trên 300 cặp gán tay, precision của hệ là 5/5 với cặp khác trang và 0,385 với cặp cùng trang, recall 0,769.
+  Hiệu chỉnh thô theo các số đó: số tin trùng thật khoảng **1–2,5%** số tin. Ước lượng thô vì tập cặp gán tay
+  chỉ có 13 cặp trùng.
+- Trùng giữa hai trang ít vì hai nguồn ít chung công ty và chung thời gian, không hẳn vì nhà tuyển dụng ít đăng
+  lại. Muốn trả lời chắc RQ2 cần crawl nhắm vào các công ty có mặt trên cả hai trang, nhưng ngân sách crawl
+  TopCV hiện chỉ ~50–60 request/ngày (mục sự cố 2026-11-18).
+
+### WM3 – lô câu gán thêm
+
+Toàn bộ câu review còn chưa gán và không thuộc review của TEST: **247 câu** (vi 186, en 61; phần "thích" 179,
+"cần cải thiện" 47, tiêu đề 21) → lô `absa_dev3` để gán theo guideline WM3 hiện hành. Đây là tối đa có thể
+có mà không crawl thêm review. Gán xong thì dev tăng từ 200 lên ~450 câu; chạy lại CV các mô hình đã thử
+(TF-IDF, PhoBERT đóng băng, PhoBERT fine-tune, mô hình lai) trước khi chấm TEST lần mới.
+
+Lệnh: `uv run python -m annotation.sample_absa_batch --all --batch absa_dev3 --exclude-reviews-of data/annotation/absa_test1.absa.jsonl --exclude-texts-of <absa_trial + absa_dev2>`
+
+### WM5 – bộ chấm tay gợi ý việc làm
+
+Thêm `recsys/judge_kit.py`: 30 hồ sơ kỹ năng × 4 phương pháp (độ phổ biến, trùng kỹ năng, TF-IDF, lai), gộp
+top-10, xáo thứ tự, người chấm không biết phương pháp; nDCG@10 với điểm 0/1/2, so ghép cặp theo hồ sơ. Hồ sơ
+nháp ở `data/eval/wm5_profiles_draft.csv` cần nhóm duyệt **trước** khi tạo phiếu. Chạy thử: ~790 dòng cần chấm
+(~26 tin/hồ sơ). Chưa có kết quả.
+
+### mining-service – chế độ PhoBERT
+
+Đặt `JOBLENS_MINING_SKILL_MODEL` thì `/v1/skills:extract` dùng PhoBERT (cùng model với image) thay cho từ
+điển; hợp đồng không đổi, `model_version` = `skill-extractor:<tag>`. Test hợp đồng có thêm hai ca cho chế độ
+này (dùng model giả). Độ trễ đo trên CPU (tắt GPU, 2 luồng torch), 100 văn bản mô tả + yêu cầu của tin TopCV
+(trung bình 1.646 ký tự), không tính lần nạp model: **p50 0,07 giây, p95 0,21 giây, max 0,35 giây**; 18,6 kỹ
+năng/văn bản. Đạt yêu cầu ADR 0002 (p95 ≤ 3 giây). Lệnh: `uv run python -m service.bench --n 100 --threads 2`.
+
+### WM2 – gắn mã ESCO cho từ điển kỹ năng (dở dang)
+
+Contract `silver.job_skills` ghi `skill_id` là URI ESCO nếu có, nhưng cột `esco_uri` của từ điển vẫn rỗng.
+`ie/esco_map.py` tra API tìm kiếm công khai của ESCO bằng **tên kỹ năng** (không gửi văn bản tin), tự nhận khi
+nhãn ESCO (bỏ chú thích trong ngoặc) trùng đúng tên hoặc alias, còn lại đưa ra file duyệt.
+
+- 2026-11-20: tra được **86/200 kỹ năng** (159 request, 1,1 giây/request) thì ESCO trả **HTTP 403** → dừng,
+  không thử lại trong ngày. Script đã sửa: 2 giây/request, tối đa 2 truy vấn/kỹ năng, gặp lỗi HTTP thì dừng, chạy
+  lại chỉ tra phần thiếu (cache).
+- Trong 86 kỹ năng: **tự nhận 10** (ASP.NET, Ajax, Ansible, C#, C++, CSS, DevOps, Illustrator, Java,
+  JavaScript); **duyệt nhận 11** (AI, Adobe Creative Suite, Agile, Agile/Scrum, AutoCAD, Automation Testing,
+  CRM, Cloud, ETL, Firewall, Java Core – agent đề xuất, **cần người kiểm**); 65 không có trong ESCO.
+- Quy tắc duyệt: chỉ nhận khi cùng khái niệm. **Không** đưa công cụ cụ thể về nhóm rộng hơn (Excel ↛ "use
+  spreadsheets software", Git ↛ "tools for software configuration management", After Effects ↛ "motion
+  graphics"), vì như vậy nhiều kỹ năng khác nhau sẽ chung một `skill_id` và làm sai số đếm.
+- Tính theo số lần xuất hiện trong 888 tin crawl: 86 kỹ năng đã tra chiếm 56% số lần xuất hiện; trong đó
+  **44%** có mã ESCO. Hụt lớn nhất là các công cụ hạ tầng và đám mây mà ESCO (bản hiện hành) không có: API
+  (680 lần), AWS (522), Azure (492), Docker (360), CI/CD (356), Git (252), GCP (232).
+- Chưa ghi vào từ điển: đợi tra xong 200 kỹ năng. Khi ghi, `skill_id` của các kỹ năng có ESCO đổi từ
+  `joblens:<slug>` sang URI ESCO (đúng contract) – cần build image mới và báo nhóm dùng `silver.job_skills`.
+
+### Chạy lại các bài dùng đầu ra WM2 bằng mô hình nhãn LLM (image 0.2.0)
+
+**WM6 – đồ thị kỹ năng.** Dựng lại bằng PhoBERT nhãn LLM (867 tin; 799 tin có kỹ năng, 7,1 kỹ năng/tin; 150
+đỉnh, 2.590 cạnh). NPMI ≥ 0,3 → 145 đỉnh/558 cạnh; Louvain **8 cụm, Q 0,517**; đồ thị ngẫu nhiên giữ bậc
+0,305 ± 0,008, **z 27,2**, 0/100 lần ngẫu nhiên bằng hoặc hơn; ổn định theo seed NMI 0,86–1,00. So phân hoạch:
+với đồ thị từ điển NMI 0,727 / ARI 0,621 (143 đỉnh chung); với đồ thị PhoBERT self-training cũ NMI 0,810 / ARI
+0,716, top-20 kỹ năng theo số tin trùng 20/20. Kết luận WM6 giữ nguyên. Đồ thị gần như không đổi vì nó chỉ
+tính kỹ năng có trong từ điển 200 kỹ năng: span mới mà mô hình bắt thêm phần lớn nằm ngoài từ điển và bị bỏ
+khi quy về tên chuẩn. Đồ thị cũ lưu ở `data/graph/skill_graph_phobert_selftrain.json`.
+
+**Bảng nhu cầu kỹ năng.** Chạy lại với `--extractor phobert` (mô hình nhãn LLM). Độ phủ tin có ít nhất một
+kỹ năng: TopCV 90%, ITviec 94%, VietJobs IT 77% (từ điển: 93% / 97% / 83% – từ điển còn dùng tag nhà tuyển
+dụng). Thiên lệch nguồn vẫn là kết quả chính: AI 24,2% (TopCV) / 42,2% (ITviec) / 12,5% (VietJobs IT);
+Photoshop đứng đầu VietJobs IT (14,9%). Lệnh: `uv run python -m experiments.skill_demand --extractor phobert
+--top 10 --min-jobs 15 --out data/eval/skill_demand_phobert.json`.
+
+**WM5 – gợi ý trên log synthetic, dùng kỹ năng WM2 thay tag.** Trích kỹ năng 304 tin `topcv_20261012` bằng
+image bản full (21,7 kỹ năng/tin sau khi quy về tên chuẩn), đưa vào `recsys.baseline --skills`.
+
+| Chiến lược | tag nhà tuyển dụng (số chính thức) | kỹ năng WM2 |
+|---|---|---|
+| popularity | 0,027 / 0,015 | 0,027 / 0,015 |
+| content-skill | 0,069 / 0,058 | **0,090 / 0,070** |
+| content-tfidf | 0,102 / 0,071 | 0,102 / 0,071 |
+| hybrid | 0,097 / 0,072 | 0,097 / 0,072 |
+
+(Recall@10 / nDCG@10.) Trùng kỹ năng tốt hơn khi dùng kỹ năng WM2, đuổi kịp TF-IDF; chưa có khoảng tin cậy và
+vẫn là log synthetic (người dùng ảo sinh từ tag), nên chỉ là số phụ. Số WM5 chính thức không đổi.
