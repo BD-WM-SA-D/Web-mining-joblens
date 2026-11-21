@@ -3,7 +3,9 @@
     uv sync --group service
     uv run uvicorn service.app:app --port 8091
 
-- POST /v1/skills:extract – trích kỹ năng bằng từ điển alias (baseline WM2).
+- POST /v1/skills:extract – trích kỹ năng bằng từ điển alias (baseline WM2). Đặt `JOBLENS_MINING_SKILL_MODEL`
+  (thư mục model PhoBERT, cùng model với image skill-extractor) thì dùng PhoBERT trên CPU; span được tra từ điển
+  để ra skill_id, không có thì `joblens:<slug>`. Cần nhóm `ml`.
 - POST /v1/recommend – đếm kỹ năng trùng với chỉ mục tin (service/index.py).
 - GET /health – "degraded" khi chưa có chỉ mục gợi ý.
 
@@ -23,13 +25,27 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from service.skills import DICT_CONFIDENCE, SkillCatalog
+from service.skills import DICT_CONFIDENCE, SkillCatalog, slug
 
-MODEL_VERSION = "stub-dict-alias"
+MODEL_CONFIDENCE = 0.8  # như image skill-extractor: mức cố định, không phải xác suất
+
+STUB_VERSION = "stub-dict-alias"
+MODEL_DIR = os.environ.get("JOBLENS_MINING_SKILL_MODEL")
 INDEX_PATH = Path(os.environ.get("JOBLENS_MINING_INDEX", "data/index/job_skills.json"))
 
-app = FastAPI(title="JobLens Mining API (stub)", version="0.1.0")
+app = FastAPI(title="JobLens Mining API", version="0.1.0")
 catalog = SkillCatalog()
+
+
+def _load_model(model_dir: str | None):
+    if not model_dir:
+        return None, STUB_VERSION
+    from batch.skill_extractor import PhoBERT
+
+    return PhoBERT(Path(model_dir)), f"skill-extractor:{os.environ.get('JOBLENS_IMAGE_VERSION', 'local')}"
+
+
+skill_model, MODEL_VERSION = _load_model(MODEL_DIR)
 
 
 def _load_index(path: Path) -> tuple[dict[str, set[str]], str | None]:
@@ -80,7 +96,22 @@ def health() -> dict:
 @app.post("/v1/skills:extract")
 def extract(req: ExtractRequest) -> dict:
     skills = []
-    if DICT_CONFIDENCE >= req.min_confidence:
+    if skill_model is not None:
+        if MODEL_CONFIDENCE >= req.min_confidence:
+            for start, end in skill_model.spans([req.text])[0]:
+                surface = req.text[start:end]
+                skill = catalog.lookup(surface)
+                skills.append(
+                    {
+                        "skill_id": skill.skill_id if skill else f"joblens:{slug(surface)}",
+                        "label": skill.label if skill else surface,
+                        "surface_form": surface,
+                        "start": start,
+                        "end": end,
+                        "confidence": MODEL_CONFIDENCE,
+                    }
+                )
+    elif DICT_CONFIDENCE >= req.min_confidence:
         for start, end, surface, skill in catalog.extract(req.text):
             skills.append(
                 {

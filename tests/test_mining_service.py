@@ -96,3 +96,37 @@ def test_latency_under_3s(client):
     t = time.perf_counter()
     client.post("/v1/skills:extract", json={"text": text[:20000]})
     assert time.perf_counter() - t < 3
+
+
+class _FakeModel:
+    """Thay PhoBERT: trả span ký tự cố định, để test luồng chế độ mô hình mà không cần torch."""
+
+    def spans(self, texts):
+        text = texts[0]
+        out = []
+        for word in ("Python", "vận hành máy CNC"):
+            i = text.find(word)
+            if i >= 0:
+                out.append((i, i + len(word)))
+        return [out]
+
+
+def test_extract_model_mode_matches_contract(client, monkeypatch):
+    monkeypatch.setattr(svc, "skill_model", _FakeModel())
+    monkeypatch.setattr(svc, "MODEL_VERSION", "skill-extractor:test")
+    text = "Biết Python và vận hành máy CNC"
+    body = client.post("/v1/skills:extract", json={"text": text}).json()
+    check("ExtractResponse", body)
+    assert body["model_version"] == "skill-extractor:test"
+    got = {s["surface_form"]: s for s in body["skills"]}
+    assert set(got) == {"Python", "vận hành máy CNC"}
+    for s in body["skills"]:
+        assert text[s["start"] : s["end"]] == s["surface_form"]
+        assert s["confidence"] == 0.8
+    assert got["vận hành máy CNC"]["skill_id"].startswith("joblens:")  # không có trong từ điển
+
+
+def test_extract_model_mode_min_confidence(client, monkeypatch):
+    monkeypatch.setattr(svc, "skill_model", _FakeModel())
+    body = client.post("/v1/skills:extract", json={"text": "Python", "min_confidence": 0.85}).json()
+    assert body["skills"] == []
