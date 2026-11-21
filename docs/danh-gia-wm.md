@@ -1,6 +1,6 @@
 # Khung đánh giá phần Web Mining – JobLens
 
-*Bản 20/10/2026, cập nhật mục WM2 ngày 19/11/2026. Nguồn cho chương "Thực nghiệm" và "Thảo luận" của báo cáo WM, và cho buổi trình bày với giảng viên. Số có thật lấy từ `experiments/results.md`; số chưa đo để `<...>`.*
+*Bản 20/10/2026, cập nhật mục WM2 ngày 19/11/2026. Nguồn cho chương "Thực nghiệm" và "Thảo luận" của báo cáo WM, và cho buổi trình bày với giảng viên. Số có thật lấy từ bảng kết quả thực nghiệm của repo; số chưa đo để `<...>`.*
 
 ## 1. Project trả lời những câu hỏi nào
 
@@ -98,7 +98,7 @@ Mỗi mục có cùng 5 phần:
   - Chênh dev (VietJobs) và test (TopCV): 0,797 so với 0,730. Mô hình học chủ yếu trên văn bản VietJobs vẫn giữ được phần lớn chất lượng trên trang TopCV.
 - **Insight sẽ có:**
   - Lỗi còn lại nằm ở ranh giới hay ở việc không nhận ra (khoảng cách strict − partial).
-  - Kỹ năng được yêu cầu nhiều nhất theo nhóm nghề (bảng nhu cầu kỹ năng đã có bản đầu, xem `experiments/results.md`).
+  - Kỹ năng được yêu cầu nhiều nhất theo nhóm nghề (bảng nhu cầu kỹ năng đã có bản đầu).
 - **Giúp sản phẩm:** trích kỹ năng từ tin và từ CV dán vào, dùng chung một bộ từ vựng. Đây là nền cho gợi ý việc (WM5), khoảng trống kỹ năng (UC013), thống kê nhu cầu kỹ năng.
 
 ### 2.5 WM1: Shingling + MinHash LSH (RQ2)
@@ -199,7 +199,7 @@ Mỗi mục có cùng 5 phần:
 | Luôn có baseline | Từ điển / độ phổ biến / tiêu đề + công ty | Không biết mô hình hơn được bao nhiêu |
 | κ trên ~10% | Hai người gán độc lập | Tập vàng là ý riêng một người |
 | Bootstrap 95% + 3 seed | Kèm mọi chênh lệch | Gọi "tốt hơn" khi chỉ là may |
-| Đăng ký trước | Ghi cấu hình, dự đoán và quy tắc kết luận vào `experiments/results.md` trước khi chạy; chấm test một lần | Chỉnh theo số test rồi chọn kết quả đẹp |
+| Đăng ký trước | Ghi cấu hình, dự đoán và quy tắc kết luận vào bảng kết quả trước khi chạy; chấm test một lần | Chỉnh theo số test rồi chọn kết quả đẹp |
 | Người chấm không biết phương pháp | WM4, WM5 | Ưu ái phương pháp mới |
 | Phân tích ≥ 30 lỗi theo loại | Mỗi bài | Chỉ có con số, không biết vì sao |
 | Tái lập | Snapshot + seed + lệnh + commit cho mọi số | Số không kiểm được |

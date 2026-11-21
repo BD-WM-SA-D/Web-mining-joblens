@@ -73,8 +73,8 @@ curl -s -X POST localhost:8091/v1/recommend -H 'Content-Type: application/json' 
 ## Tài liệu
 
 - Báo cáo môn: [`docs/`](docs/); khung đánh giá [`docs/danh-gia-wm.md`](docs/danh-gia-wm.md)
-- Luồng xử lý WM2 (dữ liệu → nhãn → train → chấm → image → `silver.job_skills`): [`docs/luong-xu-ly-wm2.md`](docs/luong-xu-ly-wm2.md)
-- Quyết định kiến trúc: [`docs/adr/`](docs/adr/) – [WM-0001: LLM chỉ gán nhãn train, không chạy trong sản phẩm](docs/adr/wm-0001-llm-gan-nhan-train.md)
+- Luồng xử lý WM2 (dữ liệu → nhãn → train → chấm → đóng gói → suy luận): [`docs/luong-xu-ly-wm2.md`](docs/luong-xu-ly-wm2.md)
+- Quyết định kiến trúc: [`docs/adr/`](docs/adr/) – [WM-0001: LLM chỉ gán nhãn train, không chạy khi dùng mô hình](docs/adr/wm-0001-llm-gan-nhan-train.md)
 - Thuật ngữ: [`glossary.md` trong repo joblens](https://github.com/BD-WM-SA-D/joblens/blob/main/glossary.md)
 
 ## Phụ thuộc (chỉ để tham khảo, không thuộc phần chấm)

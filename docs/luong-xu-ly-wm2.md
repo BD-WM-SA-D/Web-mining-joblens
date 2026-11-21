@@ -1,175 +1,130 @@
 # Luồng xử lý WM2 – trích kỹ năng từ tin tuyển dụng
 
-*Cập nhật 19/11/2026, ứng với image `skill-extractor` 0.2.0. Số liệu lấy từ `experiments/results.md`; chỗ chưa đo để `<...>`.*
+*Cập nhật 19/11/2026, ứng với mô hình trích kỹ năng bản 0.2.0. Chỗ chưa đo để `<...>`.*
 
-Tài liệu này mô tả WM2 từ đầu đến cuối: dữ liệu vào, cách làm nhãn, train, chấm điểm, đóng image, rồi chạy trong
-hệ thống chung. Phần hạ tầng (Kafka, Iceberg, Airflow, K8s) thuộc môn Big Data, chỉ được nhắc để chỉ rõ chỗ nối.
+WM2 nhận văn bản một tin tuyển dụng và trả về danh sách kỹ năng mà tin yêu cầu, kèm vị trí trong văn bản. Tài liệu
+này mô tả cách làm dữ liệu, nhãn, mô hình và cách đánh giá. Đầu ra được giao cho pipeline chung của dự án dưới dạng
+một image Docker; phần vận hành pipeline thuộc môn khác nên không trình bày ở đây.
 
-## 1. Vị trí trong hệ thống
+## 1. Tổng quan
 
 ```
- Web Mining (repo này)                         Big Data                                   PTTKHT
- ┌──────────────┐  jobs.raw.topcv.v1   ┌──────────────────────────────────────┐  Trino  ┌──────────┐
- │ crawler      │ ───────────────────► │ bronze → silver.job_postings         │ ──────► │ app      │
- └──────────────┘       Kafka          │              │                       │         └──────────┘
-                                       │              ▼  Airflow chạy image     │              │
- ┌──────────────┐  image có tag        │   ┌──────────────────────────┐        │              │ HTTP
- │ skill-       │ ───────────────────► │   │ skill-extractor 0.2.0    │        │              ▼
- │ extractor    │  x.y.z-gitsha        │   └──────────────────────────┘        │       ┌──────────────┐
- └──────────────┘                      │              ▼                        │       │ mining-      │
-                                       │   silver.job_skills → gold (dbt)      │       │ service      │
-                                       └──────────────────────────────────────┘       │ (bản stub)   │
-                                                                                       └──────────────┘
+                Guideline gán nhãn kỹ năng (bản 0.4)
+                 │                               │
+                 ▼                               ▼
+   ┌───────────────────────────┐   ┌──────────────────────────────┐
+   │ Tập vàng (người gán)      │   │ Nhãn yếu cho train (máy gán) │
+   │ dev 300 câu VietJobs      │   │ ① tag nhà tuyển dụng + từ điển│
+   │ test 1.000 câu TopCV      │   │ ② + luật theo guideline       │
+   │ κ trên ~10% câu           │   │ ③ + self-training             │
+   └─────────────┬─────────────┘   │ ④ câu VietJobs: LLM gán lại   │
+                 │                 │    theo guideline             │
+                 │                 └──────────────┬───────────────┘
+                 │   chọn epoch trên dev          ▼
+                 ├───────────────────► Fine-tune PhoBERT-base-v2 (BIO, 3 seed)
+                 │   chấm test một lần            │
+                 └───────────────────► F1 strict + bootstrap ghép cặp
+                                                  │
+                                                  ▼
+                                  Đóng gói thành image, giao cho pipeline
+                                                  │
+                                                  ▼
+                       Tin mới → danh sách kỹ năng (span, mã kỹ năng, độ tin cậy)
 ```
 
-- **Đường batch** (chính): Airflow của Big Data gọi image `skill-extractor` theo hợp đồng chạy ADR 0001 D3. Image
-  đọc `silver.job_postings`, ghi `silver.job_skills` (contract trong repo `joblens`). Bảng này là đầu vào của
-  gợi ý việc làm (WM5), đồ thị kỹ năng (WM6), bảng nhu cầu kỹ năng và các mart bên Big Data.
-- **Đường trực tuyến**: `mining-service` (ADR 0002) trả kỹ năng cho văn bản người dùng dán vào app. Hiện vẫn là
-  **bản stub dùng từ điển**, chưa dùng PhoBERT. Muốn đổi phải đo độ trễ trên CPU (yêu cầu p95 ≤ 3 giây): `<chưa đo>`.
-- **LLM không có mặt trong hệ thống.** Nó chỉ dùng một lần lúc làm nhãn train, trên máy của người làm WM (mục 3.2).
-  Pod không gọi API ngoài và không cần key.
+## 2. Dữ liệu
 
-## 2. Dữ liệu vào
-
-| Nguồn | Dùng cho | Rời máy? |
+| Nguồn | Dùng cho | Có gửi ra ngoài? |
 |---|---|---|
-| Tin TopCV tự crawl (snapshot `topcv_<ngày>`) | Tập test `skill_test1` (1.000 câu, 125 tin); một phần nhãn yếu train (tag "Kỹ năng cần có") | Không |
-| Tin ITviec tự crawl | Chạy batch, đồ thị, nhu cầu kỹ năng; không dùng để train WM2 | Không |
-| VietJobs, tập tin IT `vietjobs_it` (Pham Dinh et al., LREC 2026; CC BY 4.0 / MIT) | Phần lớn câu train; dev `skill_batch1` (300 câu); từ điển alias | **Có**: câu train gửi tới API LLM để gán nhãn |
-| Từ điển `ie/resources/skill_alias.csv` (200 kỹ năng, alias Việt/Anh) | Baseline, nhãn yếu, chuẩn hóa `skill_id` | Không |
+| Tin TopCV nhóm tự crawl | Tập test (1.000 câu từ 125 tin); một phần câu train (có tag "Kỹ năng cần có") | Không |
+| Tin ITviec nhóm tự crawl | Chạy thử và thống kê nhu cầu kỹ năng; không dùng để train WM2 | Không |
+| VietJobs, các tin ngành IT (Pham Dinh et al., LREC 2026; CC BY 4.0 / MIT) | Phần lớn câu train; tập dev; nguồn cho từ điển alias | **Có**: câu train được gửi tới API LLM để gán nhãn |
+| Từ điển 200 kỹ năng tự soạn, có alias tiếng Việt và tiếng Anh | Baseline, nhãn yếu, chuẩn hóa mã kỹ năng | Không |
 
-Tách tập theo **tin**: tin nào có câu trong dev hoặc test thì không có câu nào trong train.
+- Tách tập theo **tin**: tin đã có câu trong dev hoặc test thì không có câu nào trong train.
+- Dữ liệu crawl được đóng băng thành snapshot theo ngày, có mã băm danh sách tin, để chạy lại ra cùng kết quả.
 
-## 3. Luồng xây dựng mô hình (offline, trên máy WM)
+## 3. Tập vàng
 
-```
- Guideline gán nhãn kỹ năng 0.4 (annotation/guideline_skill.md)
-        │                                   │
-        ▼                                   ▼
- ┌─────────────────────┐          ┌────────────────────────────┐
- │ Tập vàng (gán tay)  │          │ Nhãn yếu cho train          │
- │ Label Studio cục bộ │          │ ① tag + từ điển             │
- │ dev  skill_batch1   │          │ ② + luật theo guideline     │
- │ test skill_test1    │          │ ③ + self-training           │
- │ κ trên ~10% câu     │          │ ④ câu VietJobs: LLM gán lại │
- └─────────┬───────────┘          │    theo guideline           │
-           │                      └─────────────┬──────────────┘
-           │                                    ▼
-           │                      ┌────────────────────────────┐
-           │  chọn epoch trên dev │ Fine-tune PhoBERT-base-v2   │
-           ├────────────────────► │ token classification BIO    │
-           │                      │ 3 seed                      │
-           │                      └─────────────┬──────────────┘
-           │   chấm TEST một lần                ▼
-           └────────────────────► seqeval strict, bootstrap ghép cặp theo tin
-                                                │
-                                                ▼
-                       models.yaml + image skill-extractor x.y.z-gitsha
-```
+- Câu được rút ngẫu nhiên có seed cố định, giới hạn số câu mỗi tin để một tin dài không chiếm phần lớn tập.
+- Gán bằng Label Studio chạy trên máy, nên dữ liệu không rời máy.
+- Dev được gợi ý sẵn bằng từ điển. **Test gán không có gợi ý**, để tập vàng không thiên về baseline.
+- Người thứ hai gán độc lập khoảng 10% câu để đo Cohen's κ.
+- Tập test được đóng băng bằng mã băm và không sửa sau khi chấm.
 
-### 3.1 Tập vàng (không bao giờ là nhãn yếu)
+## 4. Nhãn yếu cho train
 
-1. Rút câu: `annotation/sample_skill_batch.py` (tách câu theo dòng mô tả, giới hạn số câu mỗi tin, seed cố định).
-2. Gán trong Label Studio chạy cục bộ (`annotation/make_ls_project.py`, `label_studio_skill.xml`). Dev có gợi ý từ
-   điển; **test gán không có gợi ý** để không thiên về baseline.
-3. Export sang BIO: `annotation/export_bio.py`. Đo κ: `annotation/kappa_skill.py`.
-4. Test đóng băng bằng sha256 (ghi trong `models.yaml`); không sửa sau khi chấm.
+| Bước | Cách làm | Chất lượng so với nhãn tay (F1 trên dev) |
+|---|---|---|
+| ① Tag + từ điển | Dò lại tag nhà tuyển dụng và alias từ điển trong câu | 0,542 |
+| ② Thêm luật | Thêm cụm guideline coi là kỹ năng, bỏ span guideline loại (kỹ năng mềm, chức danh…) | 0,600 |
+| ③ Self-training | Thêm span mà cả ba mô hình PhoBERT (train trên ②) cùng đoán | (đo qua mô hình) |
+| ④ LLM theo guideline | Câu VietJobs: LLM đọc guideline, trả danh sách span chép nguyên văn; span được dò lại trên token thành nhãn BIO. Câu TopCV giữ nhãn ③ | 0,849 |
 
-### 3.2 Nhãn yếu cho train
-
-| Bước | Code | Làm gì | Độ nhiễu so với nhãn tay (dev) |
-|---|---|---|---|
-| ① Tag + từ điển | `ie/weak_labels.py --version tag` | Dò lại tag nhà tuyển dụng và alias từ điển trong câu | F1 0,542 |
-| ② Luật theo guideline | `ie/weak_labels.py --version rules`, `ie/weak_rules.py` | Thêm cụm guideline coi là kỹ năng, bỏ span guideline loại | F1 0,600 |
-| ③ Self-training | `ie/self_train.py` | Thêm span mà cả 3 model PhoBERT (train trên ②) cùng đoán | (đo qua mô hình) |
-| ④ LLM theo guideline | `ie/llm_label.py`, `ie/weak_llm.py` | Câu VietJobs: LLM đọc guideline, trả danh sách span; dò lại trên token thành BIO. Câu TopCV giữ nhãn ③ | F1 0,849 |
-
-Ràng buộc của bước ④ (đều nằm trong code, không chỉ là quy ước):
-- Chỉ câu có `job_uid` thuộc `vietjobs_it` được gửi đi. Câu crawl TopCV/ITviec và câu test bị chặn trước khi gọi API.
+Ràng buộc của bước ④:
+- **LLM chỉ gán nhãn train, không chạy khi dùng mô hình.** Mô hình giao đi chỉ là PhoBERT.
+- Chỉ câu VietJobs được gửi đi. Câu crawl TopCV/ITviec và câu test bị chặn trước khi gọi API, bằng kiểm tra trong code.
 - Ví dụ trong guideline gửi kèm mà trùng một câu test thì bị bỏ khỏi prompt.
-- Key đọc từ `.env` (không commit). Ghi số token và chi phí sau mỗi lần gọi, dừng khi vượt ngân sách.
-- Kết quả lưu ở `data/llm/` (không commit) để tái lập, vì dịch vụ ngoài có thể đổi mô hình.
-- Mô hình dùng: `gpt-6-luna`, `reasoning_effort` low, 20 câu mỗi lần gọi. Gán ~20.700 câu, chi phí ước ~0,54 USD.
+- Ghi số token và chi phí sau mỗi lần gọi, dừng khi vượt ngân sách. Kết quả nhãn được lưu lại để tái lập, vì dịch vụ ngoài có thể đổi mô hình.
+- Mô hình LLM: `gpt-6-luna`, mỗi lần gọi 20 câu. Gán khoảng 20.700 câu, chi phí ước khoảng 0,54 USD.
 
-### 3.3 Train và chọn mô hình
+## 5. Huấn luyện
 
-- `ie/phobert.py train --weak llm --seed <N>`: tách từ bằng underthesea, chỉ subword đầu của mỗi từ tính loss,
-  lr 3e-5, 3 epoch, batch 16, chọn epoch theo F1 trên dev. Ba seed 1–3. Model ở `data/models/wm2-phobert-<nhãn>-s<N>`.
-- Hai hướng sửa phía mô hình đã thử và **không** cải thiện (ghi trong `results.md`): học tiếp PhoBERT trên văn bản
-  tin tuyển dụng (`ie/dapt.py`) và giảm trọng số token O (`--o-weight`).
+- PhoBERT-base-v2, gán nhãn chuỗi theo BIO với một loại thực thể `SKILL`.
+- Câu được tách từ bằng underthesea trước khi đưa vào PhoBERT; chỉ subword đầu của mỗi từ được tính loss. Khi chấm,
+  nhãn được trải ngược về token gốc để so với nhãn vàng.
+- Learning rate 3e-5, 3 epoch, batch 16, chọn epoch theo F1 trên dev. Ba seed để thấy độ dao động.
+- Hai hướng sửa phía mô hình đã thử và **không** cải thiện: học tiếp PhoBERT trên văn bản tin tuyển dụng (DAPT) và
+  giảm trọng số token O khi tính loss.
 
-### 3.4 Chấm điểm
+## 6. Đánh giá
 
-- `ie/phobert.py eval … --bio data/annotation/skill_test1.bio.jsonl --split test`: seqeval strict, IOB2.
-- `experiments/paired_wm2.py`: bootstrap ghép cặp theo tin (1.000 lần) so với mô hình trước, cùng seed.
-- Quy tắc ghi trước khi chạy: chỉ gọi là "tốt hơn" khi CI95 của ΔF1 > 0 ở cả 3 seed; chỉ khi đó mới đổi image.
-- Mỗi lần chạy ghi một file vào `experiments/runs/` (commit, metric, lệnh, snapshot).
+- F1 cấp thực thể, khớp chặt (seqeval strict), trên tập test 1.000 câu TopCV; báo cả precision và recall.
+- So hai hệ bằng bootstrap ghép cặp theo tin (1.000 lần), cùng seed.
+- Mỗi thí nghiệm ghi trước cấu hình, dự đoán và quy tắc kết luận, rồi chấm test **đúng một lần**. Chỉ gọi là "tốt
+  hơn" khi khoảng tin cậy 95% của ΔF1 nằm trên 0 ở cả ba seed.
 
-| Hệ (TEST 1.000 câu) | P | R | F1 |
+| Hệ (test 1.000 câu) | P | R | F1 |
 |---|---|---|---|
-| Từ điển alias (baseline, cũng là bản stub) | 0,742 | 0,315 | 0,442 |
-| PhoBERT, nhãn yếu self-training (image 0.1.0) | 0,715 | 0,543 | 0,617 |
-| **PhoBERT, nhãn yếu LLM (image 0.2.0)** | **0,725** | **0,734** | **0,730** |
+| Từ điển alias (baseline) | 0,742 | 0,315 | 0,442 |
+| PhoBERT, nhãn yếu tag + từ điển | 0,705 | 0,469 | 0,562 |
+| PhoBERT, nhãn yếu self-training (bản 0.1.0) | 0,715 | 0,543 | 0,617 |
+| **PhoBERT, nhãn yếu do LLM gán (bản 0.2.0)** | **0,725** | **0,734** | **0,730** |
 
-### 3.5 Đóng gói
+- So với bản 0.1.0: ΔF1 +0,109 đến +0,117, khoảng tin cậy nằm trên 0 ở cả ba seed.
+- Bỏ 30 câu test trùng nguyên văn một câu train: 0,731 so với 0,620, kết luận không đổi.
+- Chênh dev (VietJobs) và test (TopCV): 0,797 so với 0,730.
 
-1. Chép model seed 1 vào `data/models/skill-extractor/` (tên chung, image không phụ thuộc tên thí nghiệm).
-2. Build từ gốc repo (`images/batch/Dockerfile`, target `full`, torch bản CPU, đã lọc gói CUDA):
-   `docker build -f images/batch/Dockerfile --target full --build-arg JOB=skill_extractor --build-arg VERSION=$V -t joblens/skill-extractor:$V .`
-   với `V=0.2.0-<gitsha>`. Bản `stub` (từ điển, không torch) build cùng Dockerfile.
-3. Cập nhật `models.yaml` (version, metric, dữ liệu train, tập test).
-4. Báo nhóm Big Data tag mới để đổi trong DAG và ghi `deploy/compat.md`.
+## 7. Khi dùng mô hình (suy luận)
 
-## 4. Luồng chạy trong image (`batch/skill_extractor.py`)
+Với mỗi tin:
 
-```
- silver.job_postings (snapshot)      hoặc file Parquet cục bộ (--input-file)
-        │  cột: job_uid, description, requirements, skill_tags
-        ▼
- ┌─────────────────────────────────────────────────────────────────────┐
- │ 1. skill_tags (tag nhà tuyển dụng) → tra từ điển → skill_id, conf 1,0 │
- │ 2. description, requirements:                                         │
- │      bản full: tách dòng → token → PhoBERT → span BIO, conf 0,8       │
- │      bản stub: khớp từ điển alias, conf 0,9                            │
- │ 3. span → skill_id: ESCO URI nếu từ điển có, không thì joblens:<slug> │
- │ 4. bỏ trùng theo (job_uid, field, span_start, span_end)               │
- │ 5. extractor_version = tag image (x.y.z-gitsha), run_id từ Airflow    │
- └─────────────────────────────────────────────────────────────────────┘
-        │  ghi đè có điều kiện theo job_uid của lô (một giao dịch Iceberg)
-        ▼
- silver.job_skills          hoặc file Parquet cục bộ (--output-file)
-```
+1. **Tag nhà tuyển dụng** (nếu có) được tra trong từ điển để ra mã kỹ năng; độ tin cậy 1,0.
+2. **Mô tả và yêu cầu** được tách dòng, tách token, đưa qua PhoBERT để lấy span kỹ năng; độ tin cậy 0,8. Bản dự phòng
+   không có PhoBERT dùng khớp từ điển; độ tin cậy 0,9.
+3. **Chuẩn hóa:** span được tra trong từ điển alias để ra mã kỹ năng chung; không có trong từ điển thì dùng mã sinh
+   từ chính chữ của span.
+4. **Bỏ trùng** span cùng vị trí trong cùng trường.
+5. Mỗi dòng kết quả ghi phiên bản mô hình đã tạo ra nó, để biết số liệu phía sau đến từ bản nào.
 
-- Tham số (ADR 0001 D3): `--input-table silver.job_postings --input-snapshot <id> --output-table silver.job_skills --run-id <id>`.
-  Chạy một mình: `--input-file … --output-file …`, thêm `--stub` cho bản từ điển.
-- Biến môi trường: `JOBLENS_CATALOG_URI` và các biến S3 do Secret của Big Data cấp; `JOBLENS_SKILL_MODEL` (mặc định
-  thư mục model trong image).
-- Confidence là mức cố định theo nguồn để app lọc được, **không** phải xác suất đã hiệu chỉnh.
-- Thời gian chạy trên CPU cho 50.000 tin: `<chưa đo>`; Big Data cần đo trước khi đưa vào DAG hằng ngày.
-- Đã chạy thử image 0.2.0 trên 30 tin cục bộ: 525 dòng kỹ năng.
+- Độ tin cậy là mức cố định theo nguồn để nơi dùng có thể lọc, **không** phải xác suất đã hiệu chỉnh.
+- Mô hình chạy trên CPU. Đo với 2 luồng CPU: khoảng 0,45 giây/tin khi chạy theo lô (ước khoảng 6 giờ cho 50.000
+  tin, chia lô chạy song song được); trả lời một văn bản dài cỡ một tin (~1.600 ký tự) mất p95 0,21 giây.
 
-## 5. Thay đổi ở 0.2.0 và ảnh hưởng tới nhóm khác
+## 8. Đóng gói và phiên bản
 
-| Thay đổi | Ảnh hưởng | Ai làm |
-|---|---|---|
-| Model mới (nhãn yếu LLM), cùng kiến trúc PhoBERT-base | Hợp đồng chạy, schema bảng, tài nguyên pod không đổi | – |
-| Tag image `0.2.0-93cf4cb` (bản stub: `0.2.0-93cf4cb-stub`) | Đổi tag trong DAG; thêm dòng `deploy/compat.md`. Cột `extractor_version` của `silver.job_skills` ghi `0.2.0-93cf4cb` | Big Data |
-| Recall tăng 0,54 → 0,73 | Mỗi tin ra nhiều kỹ năng hơn; số đếm ở gold/mart tăng. Không phải lỗi pipeline | Big Data, PTTKHT nên biết |
-| `mining-service` | Không đổi (vẫn stub); `model_version` trả về là `stub-dict-alias` | – |
-| Bước làm nhãn gọi API LLM | Chỉ ở máy WM lúc train; ghi trong `joblens/docs/project-plan/02-du-lieu.md` | – |
+- Mô hình giao dưới dạng image Docker có hai bản: **full** (PhoBERT, torch bản CPU) và **dự phòng** (chỉ từ điển, nhỏ
+  và nhanh). Tag image theo dạng `x.y.z-gitsha`, không dùng `latest`.
+- Bản hiện hành: 0.2.0, dùng mô hình seed 1.
+- Mỗi lần đổi mô hình chỉ khi thắng rõ theo quy tắc ở mục 6; khi đổi thì cập nhật danh mục model (metric, dữ liệu
+  train, tập test) và báo nhóm vận hành pipeline đổi tag.
+- So với 0.1.0, đầu vào và đầu ra không đổi định dạng. Mỗi tin ra nhiều kỹ năng hơn (recall 0,54 → 0,73), nên các
+  số đếm kỹ năng phía sau sẽ tăng.
 
-## 6. File và chỗ lưu
+## 9. Hạn chế
 
-| Thứ | Chỗ | Commit? |
-|---|---|---|
-| Code, guideline, Dockerfile, `models.yaml`, `experiments/runs/*.json` | repo này | Có |
-| Snapshot crawl, VietJobs, file nhãn (vàng, yếu, LLM), model | `data/` (gitignore); bản chia sẻ ở `s3://joblens/…` `<chưa đẩy>` | Không |
-| Key OpenAI, token Label Studio | `.env`, `data/.ls_token` | Không bao giờ |
-
-## 7. Hạn chế đã biết
-
-- Nhãn LLM vẫn là nhãn yếu (F1 0,849 so với nhãn tay); một mô hình, gán một lần, chưa đo độ ổn định.
-- 30/1.000 câu test trùng nguyên văn câu train; bỏ đi kết luận không đổi (0,731 so với 0,620).
-- Chuẩn hóa ESCO chưa làm: `esco_uri` trong từ điển còn rỗng, `skill_id` hiện là id từ điển tự soạn.
-- Dev (VietJobs) cao hơn test (TopCV) 0,067 F1: nhãn LLM trên văn bản VietJobs khớp dev hơn.
+- Nhãn LLM vẫn là nhãn yếu (F1 0,849 so với nhãn tay); một mô hình LLM, gán một lần, chưa đo độ ổn định giữa các lần gán.
+- 30/1.000 câu test trùng nguyên văn câu train (câu mẫu lặp giữa các tin); đã chấm lại khi bỏ các câu này.
+- Chưa chuẩn hóa về ESCO: mã kỹ năng hiện là mã của từ điển tự soạn.
+- Dev cao hơn test 0,067 F1, có thể do nhãn LLM trên văn bản VietJobs khớp dev (cũng là VietJobs) hơn văn bản TopCV.
+- Dữ liệu chỉ gồm tin IT đang mở trên một đến hai trang, trong khoảng hai tháng.
