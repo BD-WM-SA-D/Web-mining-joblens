@@ -2630,5 +2630,37 @@ vẫn là log synthetic (người dùng ảo sinh từ tag), nên chỉ là số
 - Chọn **trước khi xem gợi ý**, chỉ dựa trên số tin có ít nhất một kỹ năng trùng (không dựa trên thứ hạng).
 - Ước khối lượng chấm: 20 hồ sơ × 4 phương pháp × top-10, gộp tin trùng: **~500 dòng** (kỹ năng tin từ WM2).
 - **Đã tạo phiếu chấm (2026-11-21):** 20 hồ sơ (sha256 `8be17e871c62fbb0…`), kỹ năng tin lấy từ WM2, snapshot
-  `topcv_20261012`, seed 20261120 → **503 dòng**. Từ đây không sửa hồ sơ. Lệnh:
+  `topcv_20261012`, seed 20261120 → **503 dòng**, phiếu dạng Excel (.xlsx; bản CSV đầu bị Excel hiểu mô tả bắt đầu bằng "-" là công thức, cùng nội dung và thứ tự). Từ đây không sửa hồ sơ. Lệnh:
   `uv run python -m recsys.judge_kit make --profiles data/eval/wm5_profiles.csv --skills data/eval/wm5_skills_wm2.jsonl`.
+
+### WM5 – kết quả chấm tay (2026-11-22)
+
+- 20 hồ sơ, 503 cặp (hồ sơ, tin) chấm mù, 1 người chấm (Hoang Le), chưa đo κ. Điểm: 0 = 266, 1 = 42, 2 = 195.
+  Kiểm phiếu: đủ mọi cặp trong khóa, không thiếu, không thừa. Kỹ năng tin lấy từ WM2, snapshot `topcv_20261012`.
+- nDCG@10 gain 2^g − 1; tin tốt nhất "lý tưởng" lấy trong các tin đã chấm của hồ sơ đó (gộp 4 phương pháp).
+  P@10 = tỷ lệ tin trong top-10 có điểm ≥ 1. Bootstrap ghép cặp theo hồ sơ, 1.000 lần.
+
+| Phương pháp | nDCG@10 | P@10 | Δ nDCG so với độ phổ biến [CI95] |
+|---|---|---|---|
+| `popularity` (baseline) | 0,061 | 0,065 | – |
+| `content-skill` | 0,775 | 0,740 | +0,714 [+0,615; +0,799] |
+| **`content-tfidf`** | **0,837** | **0,810** | +0,776 [+0,665; +0,862] |
+| `hybrid` | 0,812 | 0,780 | +0,752 [+0,659; +0,821] |
+
+- So với `content-tfidf`: `content-skill` −0,062 [−0,172; +0,047], `hybrid` −0,025 [−0,065; +0,017] → **không
+  phân biệt được** ba phương pháp content-based; cả ba hơn baseline rõ.
+- Theo hồ sơ: `content-skill` thua rõ ở Data analyst (0,37 so với 0,85), Project Manager (0,39 so với 0,77),
+  Fullstack Java/Angular (0,53 so với 0,96); thắng ở Lập trình nhúng (0,92 so với 0,50), Thu thập dữ liệu web
+  (0,75 so với 0,33), AI thị giác máy tính (0,97 so với 0,73). Hai cách bổ sung nhau, chưa phân tích nguyên nhân.
+- **Hạn chế:** nDCG tính trên tập tin đã chấm (pooling), nên tin tốt nằm ngoài top-10 của cả 4 phương pháp không
+  được tính → số nghiêng cao. Một người chấm, chưa có κ. Hồ sơ do nhóm soạn, 304 tin của một snapshot.
+- Kết luận khớp hướng với log synthetic (content-based ≫ độ phổ biến; ghép độ phổ biến không giúp), nhưng đây là
+  số đầu tiên có người đánh giá. **Số WM5 chính thức chuyển sang bảng này**; log synthetic giữ làm kiểm tra cài đặt.
+- Lệnh: `uv run python -m recsys.judge_kit score` (thêm `--baseline content-tfidf` để so với TF-IDF).
+- **κ (chuẩn bị, 2026-11-22):** phiếu người chấm thứ hai 50 dòng rút ngẫu nhiên từ 503 dòng (seed 20261122; điểm
+  người 1 trong mẫu: 0 = 20, 1 = 7, 2 = 23; đủ 20 hồ sơ), không kèm điểm người 1. Chưa có kết quả.
+  Lệnh: `uv run python -m recsys.judge_kit kappa-make --n 50` → chấm → `uv run python -m recsys.judge_kit kappa`.
+- **κ (kết quả, 2026-11-22):** người chấm thứ hai chấm độc lập 50 dòng. Trùng điểm 42/50 (84%).
+  κ 3 mức **0,732** [0,58; 0,89]; κ trọng số tuyến tính **0,837** [0,72; 0,94]; κ hợp/không (điểm ≥ 1) **0,833**
+  [0,64; 0,96] (bootstrap 2.000 lần theo dòng). Không có cặp lệch 0 ↔ 2; 8 dòng lệch đều nằm quanh mức 1
+  (người 1 → người 2: 0→1 ×2, 1→0 ×2, 1→2 ×3, 2→1 ×1). Đạt mục tiêu κ ≥ 0,7; nhãn chính thức vẫn là của người 1.

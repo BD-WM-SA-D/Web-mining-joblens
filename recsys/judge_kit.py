@@ -1,8 +1,10 @@
 """WM5 – chấm tay gợi ý việc làm: người chấm không biết phương pháp nào gợi ý tin nào.
 
     uv run python -m recsys.judge_kit make --profiles data/eval/wm5_profiles.csv     # → phiếu chấm + khóa
-    # người chấm điền cột `grade` (0 không hợp, 1 hợp một phần, 2 hợp) trong data/eval/wm5_judge.csv
+    # người chấm điền cột `grade` (0 không hợp, 1 hợp một phần, 2 hợp) trong data/eval/wm5_judge.xlsx
     uv run python -m recsys.judge_kit score                                          # nDCG@10 từng phương pháp
+    uv run python -m recsys.judge_kit kappa-make --n 50   # phiếu cho người chấm thứ hai (không kèm điểm người 1)
+    uv run python -m recsys.judge_kit kappa               # Cohen's κ giữa hai người
 
 - Hồ sơ (`--profiles`): CSV `profile_id,skills,note`; `skills` cách nhau bằng dấu `;`. Hồ sơ do nhóm soạn trước
   khi xem gợi ý, không sửa sau khi đã thấy kết quả.
@@ -13,6 +15,8 @@
   `recsys.baseline`.
 - nDCG@10 dùng điểm 0/1/2 làm gain; ideal tính trên mọi tin đã chấm của hồ sơ đó (gộp các phương pháp). So hai
   phương pháp bằng bootstrap ghép cặp theo hồ sơ.
+- Phiếu chấm là file Excel (.xlsx), mọi ô ghi dạng chữ: CSV mở bằng Excel sẽ hiểu mô tả bắt đầu bằng "-" là công
+  thức (#NAME?) và có thể làm hỏng dữ liệu khi lưu lại.
 - File hồ sơ, phiếu chấm, khóa nằm trong data/ (không commit).
 """
 
@@ -43,8 +47,10 @@ ROOT = Path(__file__).resolve().parents[1]
 EVAL = ROOT / "data" / "eval"
 SNAPSHOT = ROOT / "data" / "crawl" / "topcv" / "topcv_20261012.parquet"
 EVENTS = EVAL / "reco_events.jsonl"
-JUDGE = EVAL / "wm5_judge.csv"
+JUDGE = EVAL / "wm5_judge.xlsx"
 KEY = EVAL / "wm5_judge_key.json"
+JUDGE2 = EVAL / "wm5_judge_k2.xlsx"
+KAPPA_SEED = 20261122
 SEED = 20261120
 DESC_CHARS = 400
 
@@ -117,14 +123,60 @@ def cmd_make(args) -> None:
             )
     if JUDGE.exists() and not args.force:
         raise SystemExit(f"{JUDGE} đã có (có thể đã chấm) – dùng --force nếu chắc chắn muốn tạo lại")
-    with JUDGE.open("w", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0]))
-        w.writeheader()
-        w.writerows(rows)
+    write_sheet(rows, JUDGE)
     KEY.write_text(json.dumps({"seed": SEED, "snapshot": str(args.snapshot), "key": key}, ensure_ascii=False), "utf-8")
     n_prof = len(key)
     print(f"{n_prof} hồ sơ, {len(rows)} dòng cần chấm (trung bình {len(rows) / max(1, n_prof):.1f}/hồ sơ) → {JUDGE}")
     print(f"khóa (người chấm không mở): {KEY}")
+
+
+WIDTHS = {
+    "profile_id": 8,
+    "profile_skills": 28,
+    "job_uid": 10,
+    "title": 32,
+    "company": 22,
+    "tags": 28,
+    "description": 70,
+    "grade": 7,
+}
+
+
+def write_sheet(rows: list[dict], path: Path) -> None:
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "cham"
+    cols = list(rows[0])
+    ws.append(cols)
+    for r in rows:
+        ws.append(["" if r[c] is None else str(r[c]) for c in cols])
+    for i, c in enumerate(cols, 1):
+        letter = ws.cell(1, i).column_letter
+        ws.column_dimensions[letter].width = WIDTHS.get(c, 15)
+        ws.cell(1, i).font = Font(bold=True)
+        for cell in ws[letter][1:]:
+            cell.data_type = "s"  # luôn là chữ, không phải công thức hay số
+            cell.alignment = Alignment(wrap_text=c != "job_uid", vertical="top")
+    g = ws.cell(1, cols.index("grade") + 1).column_letter
+    dv = DataValidation(type="list", formula1='"0,1,2"', allow_blank=True)
+    dv.add(f"{g}2:{g}{len(rows) + 1}")
+    ws.add_data_validation(dv)
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+    wb.save(path)
+
+
+def read_sheet(path: Path) -> list[dict]:
+    from openpyxl import load_workbook
+
+    ws = load_workbook(path, read_only=True).active
+    it = ws.iter_rows(values_only=True)
+    cols = [str(c) for c in next(it)]
+    return [{c: "" if v is None else str(v) for c, v in zip(cols, row, strict=False)} for row in it]
 
 
 def ndcg(ranked: list[str], grades: dict[str, int]) -> float:
@@ -138,13 +190,12 @@ def cmd_score(args) -> None:
     key = json.loads(KEY.read_text("utf-8"))["key"]
     grades: dict[str, dict[str, int]] = defaultdict(dict)
     missing = 0
-    with JUDGE.open(encoding="utf-8-sig") as f:
-        for r in csv.DictReader(f):
-            g = r["grade"].strip()
-            if g == "":
-                missing += 1
-                continue
-            grades[r["profile_id"]][r["job_uid"]] = int(g)
+    for r in read_sheet(JUDGE):
+        g = r["grade"].strip()
+        if g == "":
+            missing += 1
+            continue
+        grades[r["profile_id"]][r["job_uid"]] = int(float(g))
     if missing:
         print(f"CẢNH BÁO: {missing} dòng chưa chấm – các tin đó tính là 0")
     methods = list(next(iter(key.values())))
@@ -164,6 +215,39 @@ def cmd_score(args) -> None:
         print(f"  Δ nDCG {m} − {base}: {sum(diffs) / n:+.3f}, CI95 [{boots[24]:+.3f}; {boots[974]:+.3f}]")
 
 
+def cmd_kappa_make(args) -> None:
+    rows = read_sheet(JUDGE)
+    sample = random.Random(KAPPA_SEED).sample(rows, min(args.n, len(rows)))
+    if JUDGE2.exists() and not args.force:
+        raise SystemExit(f"{JUDGE2} đã có (có thể đã chấm) – dùng --force nếu chắc chắn muốn tạo lại")
+    write_sheet([{**r, "grade": ""} for r in sample], JUDGE2)
+    print(f"{len(sample)} dòng (seed {KAPPA_SEED}), cột grade để trống → {JUDGE2}")
+
+
+def kappa_scores(a: list[int], b: list[int]) -> dict[str, float]:
+    from sklearn.metrics import cohen_kappa_score
+
+    return {
+        "κ 3 mức (0/1/2)": cohen_kappa_score(a, b, labels=[0, 1, 2]),
+        "κ trọng số tuyến tính": cohen_kappa_score(a, b, labels=[0, 1, 2], weights="linear"),
+        "κ hợp/không (≥ 1)": cohen_kappa_score([x >= 1 for x in a], [x >= 1 for x in b]),
+    }
+
+
+def cmd_kappa(_args) -> None:
+    first = {(r["profile_id"], r["job_uid"]): int(float(r["grade"])) for r in read_sheet(JUDGE) if r["grade"].strip()}
+    pairs = [
+        (first[(r["profile_id"], r["job_uid"])], int(float(r["grade"])))
+        for r in read_sheet(JUDGE2)
+        if r["grade"].strip() and (r["profile_id"], r["job_uid"]) in first
+    ]
+    a, b = [x for x, _ in pairs], [y for _, y in pairs]
+    agree = sum(x == y for x, y in pairs)
+    print(f"{len(pairs)} dòng cả hai cùng chấm; trùng điểm {agree} ({agree / max(1, len(pairs)):.0%})")
+    for name, k in kappa_scores(a, b).items():
+        print(f"  {name}: {k:.3f}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -174,8 +258,13 @@ def main() -> None:
     m.add_argument("--force", action="store_true")
     s = sub.add_parser("score")
     s.add_argument("--baseline", default="popularity")
+    km = sub.add_parser("kappa-make")
+    km.add_argument("--n", type=int, default=50)
+    km.add_argument("--force", action="store_true")
+    sub.add_parser("kappa")
     args = ap.parse_args()
-    cmd_make(args) if args.cmd == "make" else cmd_score(args)
+    cmds = {"make": cmd_make, "score": cmd_score, "kappa-make": cmd_kappa_make, "kappa": cmd_kappa}
+    cmds[args.cmd](args)
 
 
 if __name__ == "__main__":

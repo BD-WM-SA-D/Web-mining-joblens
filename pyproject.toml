@@ -25,6 +25,7 @@ dependencies = [
     "rank-bm25>=0.2",          # baseline tìm kiếm (WM4, tùy chọn)
     "networkx>=3.3",           # đồ thị kỹ năng (WM6, tùy chọn)
     "seqeval>=1.2",            # F1 cấp thực thể cho WM2
+    "openpyxl>=3.1.5",
 ]
 
 [dependency-groups]

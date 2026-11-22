@@ -17,3 +17,20 @@ def test_ndcg_khong_tin_nao_hop_bang_0():
 
 def test_top_k_hoa_diem_xep_theo_job_uid():
     assert top_k({"b": 1.0, "a": 1.0, "c": 2.0})[:3] == ["c", "a", "b"]
+
+
+def test_phieu_xlsx_giu_mo_ta_bat_dau_bang_gach_la_chu(tmp_path):
+    from recsys.judge_kit import read_sheet, write_sheet
+
+    rows = [{"profile_id": "p01", "job_uid": "07e10", "description": "- Viết API", "grade": ""}]
+    path = tmp_path / "j.xlsx"
+    write_sheet(rows, path)
+    back = read_sheet(path)
+    assert back[0]["description"] == "- Viết API" and back[0]["job_uid"] == "07e10" and back[0]["grade"] == ""
+
+
+def test_kappa_hai_nguoi_giong_het_bang_1():
+    from recsys.judge_kit import kappa_scores
+
+    k = kappa_scores([0, 1, 2, 2, 0], [0, 1, 2, 2, 0])
+    assert all(abs(v - 1.0) < 1e-9 for v in k.values())
