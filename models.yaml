@@ -1,8 +1,22 @@
 # Danh mục mô hình đã huấn luyện.
 # File mô hình không commit vào git; ở đây chỉ ghi phương pháp, dữ liệu, chỉ số và tập đánh giá.
+#
+# Trường `image`, `version`, `tag`, `tag_stub` là nơi nhóm vận hành tra phiên bản để ghim trong DAG.
+# Quy ước tag: <image>:<version>-<gitsha của commit đã build>, bản không cần model thêm hậu tố `-stub`.
+# Không dùng `latest`. Mỗi lần đổi nội dung image (gồm cả thư viện hay tham số dòng lệnh) thì tăng
+# `version` và điền lại `tag`; đổi mô hình thì tăng thêm phần `minor`.
 models:
   - name: skill-extractor
     task: WM2, trích xuất kỹ năng
+    image: joblens/skill-extractor
+    version: 0.2.1
+    tag: joblens/skill-extractor:0.2.1-<gitsha>
+    tag_stub: joblens/skill-extractor:0.2.1-<gitsha>-stub
+    entrypoint: python -m batch.skill_extractor
+    io: silver.job_postings → silver.job_skills (overwrite_partition)
+    changelog: >
+      0.2.1 – thêm pyiceberg-core (ghi được bảng chia ô bucket/months) và tham số --sources,
+      --changed-since; mô hình không đổi so với 0.2.0 nên chỉ số giữ nguyên.
     method: >
       PhoBERT-base-v2 gán nhãn chuỗi (BIO, một loại thực thể là kỹ năng). Nhãn huấn luyện cho câu
       VietJobs do LLM gán theo guideline gán nhãn kỹ năng; câu TopCV giữ nhãn self-training từ tag
@@ -15,8 +29,40 @@ models:
     date: 2026-11-19
     note: >
       Chuẩn hóa về bộ kỹ năng quốc tế (ESCO) mới làm một phần; tên chuẩn hiện lấy từ từ điển 200 kỹ năng.
+  - name: job-dedup
+    task: WM1, phát hiện tin tuyển dụng trùng
+    image: joblens/job-dedup
+    version: 0.1.1
+    tag: joblens/job-dedup:0.1.1-<gitsha>
+    tag_stub: joblens/job-dedup:0.1.1-<gitsha>-stub
+    entrypoint: python -m batch.job_dedup
+    io: silver.job_postings → silver.job_dedup (merge theo job_uid)
+    changelog: >
+      0.1.1 – thêm pyiceberg-core và tham số --sources; thuật toán không đổi so với 0.1.0.
+    method: >
+      Khóa tiêu đề mềm cộng tên công ty đã chuẩn hóa, hợp với MinHash LSH trên shingle 3 từ của nội
+      dung sau khi cắt các đoạn dùng chung giữa nhiều tin của cùng công ty, ngưỡng Jaccard 0,5.
+      Cặp gộp thành nhóm bằng hợp nhất tập. Không dùng mô hình học máy.
+    metrics: {pair_f1: 0.645, precision: 0.556, recall: 0.769, pair_f1_weighted: 0.724}
+    baseline: {pair_f1: 0.556, precision: 1.000, recall: 0.385}  # khóa tiêu đề + công ty chính xác
+    eval_set: 300 cặp tin gán tay, rút theo tầng (gồm tầng thuật toán không đề xuất, để đo bỏ sót)
+    trained_by: <Họ tên>
+    date: 2026-11-18
+    note: >
+      Số có trọng số theo tầng (pair_f1_weighted) là số nên dùng khi suy ra toàn bộ tập cặp, vì mẫu
+      rút theo tầng chứ không ngẫu nhiên đều. Chỉ có 13 cặp trùng trong 300 cặp nên khoảng tin cậy
+      rộng: F1 CI95 [0,417; 0,815]. Giới hạn đã biết: hai vị trí khác cấp bậc của cùng công ty có mô
+      tả gần như y hệt vẫn bị gộp.
   - name: absa-aspect-polarity
     task: WM3, khía cạnh và cực tính của câu review
+    image: joblens/absa-scorer
+    version: 0.1.1
+    tag: joblens/absa-scorer:0.1.1-<gitsha>
+    tag_stub: joblens/absa-scorer:0.1.1-<gitsha>-stub
+    entrypoint: python -m batch.absa_scorer
+    io: bronze.reviews_raw → silver.review_aspects (overwrite_partition)
+    changelog: >
+      0.1.1 – thêm pyiceberg-core và tham số --sources, --changed-since; mô hình không đổi so với 0.1.0.
     method: >
       Khía cạnh lấy từ từ điển; cực tính học bằng hồi quy logistic 3 lớp trên các tín hiệu từ điển
       cộng TF-IDF từ 1-2 gram. Huấn luyện trên 200 câu dev gán tay. Không dùng nhãn yếu từ điểm sao,
