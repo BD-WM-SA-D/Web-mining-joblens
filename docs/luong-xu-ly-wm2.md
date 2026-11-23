@@ -1,8 +1,8 @@
-# Luồng xử lý WM2 – trích kỹ năng từ tin tuyển dụng
+# Luồng xử lý T1 – trích kỹ năng từ tin tuyển dụng
 
 *Cập nhật 23/11/2026. Chỗ chưa đo để `<...>`.*
 
-WM2 nhận văn bản một tin tuyển dụng và trả về danh sách kỹ năng mà tin yêu cầu, kèm vị trí trong văn bản. Tài liệu này mô tả cách làm dữ liệu, nhãn, mô hình và cách đánh giá.
+T1 nhận văn bản một tin tuyển dụng và trả về danh sách kỹ năng mà tin yêu cầu, kèm vị trí trong văn bản. Tài liệu này mô tả cách làm dữ liệu, nhãn, mô hình và cách đánh giá.
 
 ## 1. Tổng quan
 
@@ -32,7 +32,7 @@ WM2 nhận văn bản một tin tuyển dụng và trả về danh sách kỹ n�
 | Nguồn | Dùng cho | Có gửi ra ngoài? |
 |---|---|---|
 | Tin TopCV nhóm tự crawl | Tập test (1.000 câu từ 125 tin); một phần câu train (có tag "Kỹ năng cần có") | Không |
-| Tin ITviec nhóm tự crawl | Chạy thử và thống kê nhu cầu kỹ năng; không dùng để train WM2 | Không |
+| Tin ITviec nhóm tự crawl | Chạy thử và thống kê nhu cầu kỹ năng; không dùng để train T1 | Không |
 | VietJobs, các tin ngành IT (Pham Dinh et al., LREC 2026; CC BY 4.0) | Phần lớn câu train; tập dev; nguồn cho từ điển alias | **Có**: câu train được gửi tới dịch vụ LLM để gán nhãn |
 | Từ điển 200 kỹ năng tự soạn, có alias tiếng Việt và tiếng Anh | Baseline, nhãn huấn luyện, chuẩn hóa tên kỹ năng | Không |
 
@@ -75,7 +75,7 @@ Ràng buộc của bước ④:
 - So hai hệ bằng bootstrap ghép cặp theo tin (1.000 lần), cùng seed.
 - Mỗi thí nghiệm ghi trước cấu hình và quy tắc kết luận, rồi chấm test **đúng một lần**. Chỉ gọi là "tốt hơn" khi khoảng tin cậy 95% của ΔF1 nằm trên 0 ở cả ba seed.
 
-| Hệ (test 1.000 câu) | P | R | F1 |
+| Hệ (test 1.000 câu) | Precision | Recall | F1 |
 |---|---|---|---|
 | Từ điển alias (baseline) | 0,742 | 0,315 | 0,442 |
 | PhoBERT, nhãn yếu từ tag và từ điển | 0,705 | 0,469 | 0,562 |
