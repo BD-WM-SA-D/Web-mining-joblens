@@ -13,6 +13,8 @@ Tách câu bằng `absa/split.py` như lúc gán nhãn, rồi:
   `JOBLENS_ABSA_GOLD_DIR` (mặc định `data/annotation/`). **Đọc kèm kết quả:** luật một dòng theo phần của review
   được 0,583 trên cùng tập – phần mô hình học thêm là nhỏ (xem `experiments/results.md`).
 
+`--sources itviec` giới hạn nguồn; `--changed-since <ISO>` chỉ xử lý review có `crawl_ts` từ mốc đó trở đi.
+
 Mỗi khía cạnh nhận diện được trong câu là một dòng. Câu không có khía cạnh nào thì không ghi. `sentence_index`
 đánh số liên tục theo thứ tự: "Điều tôi thích" → "Đề nghị cải thiện" → tiêu đề review. `sentence_text` qua lại bộ
 lọc PII trước khi ghi. `company_key` theo quy tắc trong contract `gold.dim_company` (bỏ dấu, bỏ loại hình pháp
@@ -134,7 +136,7 @@ def score(messages: list[dict], stub: bool, run_id: str, model: Hybrid | None = 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    add_io_args(ap, "silver.review_aspects")
+    add_io_args(ap, "silver.review_aspects", changed_since_col="crawl_ts")
     args = ap.parse_args()
     messages = load_input(args)
     model = None if args.stub else Hybrid(Path(os.environ.get("JOBLENS_ABSA_GOLD_DIR", ROOT / "data" / "annotation")))

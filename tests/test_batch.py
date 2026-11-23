@@ -220,3 +220,108 @@ def test_iceberg_write_is_idempotent(tmp_path):
     got = read_table("silver.job_dedup", None, cat=cat)
     assert len(got) == len(JOBS), "chạy lại không được sinh bản trùng"
     assert {r["run_id"] for r in got} == {"r2"}
+
+
+# ---------- lọc đầu vào: nguồn và chạy tăng dần ----------
+
+ROWS_FILTER = [
+    {"job_uid": "a", "source": "topcv", "updated_ts": "2026-11-20T08:00:00"},
+    {"job_uid": "b", "source": "itviec", "updated_ts": "2026-11-23T09:30:00"},
+    {"job_uid": "c", "source": "vietjobs", "updated_ts": "2026-11-23T10:00:00"},
+    {"job_uid": "d", "source": "synthetic", "updated_ts": "2026-11-23T10:00:00"},
+    {"job_uid": "e", "source": "topcv", "updated_ts": None},
+]
+
+
+def uids(rows):
+    return [r["job_uid"] for r in rows]
+
+
+def test_filter_rows_theo_nguon():
+    from batch.tables import filter_rows
+
+    got = filter_rows(ROWS_FILTER, ("topcv", "itviec"), None, "updated_ts")
+    assert uids(got) == ["a", "b", "e"], "phải bỏ vietjobs và dữ liệu mô phỏng"
+
+
+def test_filter_rows_theo_moc_thoi_gian():
+    from batch.tables import filter_rows, parse_ts
+
+    got = filter_rows(ROWS_FILTER, (), parse_ts("2026-11-23"), "updated_ts")
+    assert uids(got) == ["b", "c", "d"], "dòng cũ hơn mốc và dòng không có mốc đều bị bỏ"
+
+
+def test_filter_rows_ket_hop_hai_dieu_kien():
+    from batch.tables import filter_rows, parse_ts
+
+    got = filter_rows(ROWS_FILTER, ("topcv", "itviec"), parse_ts("2026-11-23T09:00:00"), "updated_ts")
+    assert uids(got) == ["b"]
+
+
+def test_filter_rows_khong_co_dieu_kien_thi_giu_nguyen():
+    from batch.tables import filter_rows
+
+    assert filter_rows(ROWS_FILTER, (), None, "updated_ts") == ROWS_FILTER
+
+
+def test_changed_since_bao_loi_khi_file_thieu_cot():
+    from batch.tables import filter_rows, parse_ts
+
+    with pytest.raises(SystemExit, match="crawl_ts"):
+        filter_rows([{"job_uid": "a", "source": "itviec"}], (), parse_ts("2026-11-23"), "crawl_ts")
+
+
+def test_moc_thoi_gian_sai_dinh_dang_bao_loi():
+    from batch.tables import parse_ts
+
+    with pytest.raises(SystemExit, match="changed-since"):
+        parse_ts("hôm qua")
+
+
+def test_load_input_loc_file_theo_nguon(tmp_path):
+    from batch.tables import load_input
+
+    path = tmp_path / "in.jsonl"
+    write_file(ROWS_FILTER, path)
+    ap = __import__("argparse").ArgumentParser()
+    from batch.tables import add_io_args
+
+    add_io_args(ap, "silver.job_skills")
+    args = ap.parse_args(
+        ["--input-file", str(path), "--output-file", str(tmp_path / "o.jsonl"), "--run-id", "t", "--sources", "topcv"]
+    )
+    assert uids(load_input(args)) == ["a", "e"]
+
+
+def test_job_dedup_khong_nhan_changed_since():
+    """Dedup phải so tin mới với toàn bộ kho tin, nên không được có tham số này."""
+    import argparse
+
+    from batch.tables import add_io_args
+
+    ap = argparse.ArgumentParser()
+    add_io_args(ap, "silver.job_dedup", changed_since_col=None)
+    with pytest.raises(SystemExit):
+        ap.parse_args(
+            [
+                "--input-table",
+                "silver.job_postings",
+                "--output-table",
+                "silver.job_dedup",
+                "--run-id",
+                "t",
+                "--changed-since",
+                "2026-11-23",
+            ]
+        )
+
+
+def test_table_filter_dung_bieu_thuc_iceberg():
+    pytest.importorskip("pyiceberg")
+    from pyiceberg.expressions import AlwaysTrue
+
+    from batch.tables import parse_ts, table_filter
+
+    assert table_filter((), None, None) == AlwaysTrue()
+    expr = table_filter(("topcv",), parse_ts("2026-11-23"), "updated_ts")
+    assert "topcv" in str(expr) and "updated_ts" in str(expr)

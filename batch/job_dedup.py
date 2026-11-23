@@ -10,6 +10,10 @@ khóa tiêu đề mềm + công ty ∪ MinHash LSH (shingle 3 từ, đã cắt k
 F1 trên cặp 0,645. `--stub` = baseline khóa tiêu đề + công ty chính xác
 (P 1,000, R 0,33–0,39): không bao giờ gộp nhầm, nhưng bỏ sót nhiều.
 
+`--sources topcv,itviec` giới hạn nguồn đầu vào; nên dùng khi bảng có cả dữ liệu mô phỏng, vì bản mô
+phỏng trùng tiêu đề và công ty với tin thật nên sẽ bị gộp thành nhóm trùng. Job này **không** có
+`--changed-since`: tìm tin trùng phải so tin mới với toàn bộ kho tin.
+
 Cặp → nhóm bằng hợp nhất tập (union-find), nên trùng có tính bắc cầu: A~B, B~C thì A, B, C cùng nhóm. Đại diện
 nhóm (`dup_group_id`) là tin xuất hiện sớm nhất (`posted_date`, rồi `first_seen_ts`/`crawl_ts`, rồi `job_uid`
 để tất định). Mọi tin đều có đúng một dòng; tin không trùng ai thì `dup_group_id` = chính nó, `score` = null.
@@ -110,7 +114,9 @@ def dedup(jobs: list[dict], stub: bool, run_id: str) -> list[dict]:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    add_io_args(ap, "silver.job_dedup")
+    # Không có --changed-since: tìm tin trùng cần so tin mới với TOÀN BỘ kho tin, lọc theo thời gian
+    # sẽ bỏ sót cặp trùng với tin cũ. Giảm khối lượng bằng --sources.
+    add_io_args(ap, "silver.job_dedup", changed_since_col=None)
     args = ap.parse_args()
     jobs = load_input(args, INPUT_COLUMNS)
     rows = dedup(jobs, args.stub, args.run_id)
