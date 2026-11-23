@@ -27,6 +27,7 @@ import json
 from pathlib import Path
 
 from absa.lexicon import ASPECTS, match_aspects
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = "aspect-dict+stars"
@@ -72,7 +73,7 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "data" / "absa" / "weak_stars.jsonl")
     args = ap.parse_args()
 
-    sents = [json.loads(ln) for ln in args.sentences.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    sents = read_jsonl(args.sentences)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     n_cov = 0
     by_aspect: collections.Counter = collections.Counter()

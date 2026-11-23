@@ -16,12 +16,14 @@ Khía cạnh không so ở đây: mô hình lai lấy khía cạnh từ chính t
 
 from __future__ import annotations
 
+from common.io import read_jsonl
+
 import argparse
 from pathlib import Path
 
 import numpy as np
 
-from absa.eval_dev import GOLD, SENTS, load_jsonl
+from absa.eval_dev import GOLD, SENTS
 from absa.lexicon import VERSION as DICT_VERSION
 from absa.lexicon import predict as dict_predict
 from absa.score import as_dict, report
@@ -55,7 +57,7 @@ def main() -> None:
     else:
         base, base_name = [as_dict(dict_predict(r["text"])) for r in trows], DICT_VERSION
     new = MODELS_FN[args.model](drows, trows, seed=args.seed)
-    assert len(load_jsonl(args.test_gold)) >= len(trows)
+    assert len(read_jsonl(args.test_gold)) >= len(trows)
 
     if args.by == "review":
         boot = list(cluster_indices([r["review_id"] for r in trows], args.b))

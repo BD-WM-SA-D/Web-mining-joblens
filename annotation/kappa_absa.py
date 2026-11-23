@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import argparse
 import collections
-import json
 import warnings
 from pathlib import Path
 
@@ -38,6 +37,7 @@ from sklearn.metrics import cohen_kappa_score
 
 from absa.lexicon import ASPECTS
 from absa.score import NONE, fmt, report, slots
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 UNUSABLE = "không gán được"
@@ -80,7 +80,7 @@ def kappa_ci(a: list[dict], b: list[dict], b_reps: int = 2000, seed: int = 0) ->
 
 
 def load(path: Path) -> dict[str, dict]:
-    rows = [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    rows = read_jsonl(path)
     return {r["sentence_id"]: r for r in rows}
 
 

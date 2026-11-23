@@ -25,6 +25,7 @@ import random
 from pathlib import Path
 
 from absa.lexicon import ASPECTS
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "data" / "annotation"
@@ -33,7 +34,7 @@ DEFAULT_SHARE = 0.10
 
 
 def load_gold(path: Path) -> list[dict]:
-    rows = [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    rows = read_jsonl(path)
     return [r for r in rows if not (r.get("flag") or "").startswith(UNUSABLE)]
 
 

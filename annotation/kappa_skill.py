@@ -6,7 +6,7 @@ Project κ (người thứ hai) có trường `src_task` trỏ về task gốc c
 ghép hai bản nhãn theo `src_task`. Đọc thẳng CSDL SQLite của Label Studio ở chế độ chỉ đọc (không cần token,
 không ghi gì).
 
-Số chính thức (2026-11-12, guideline 0.4, project 5): κ 0,650 trên 953 token, F1 0,781, 18/50 câu lệch,
+Số chính thức (2026-11-12, project 5): κ 0,650 trên 953 token, F1 0,781, 18/50 câu lệch,
 tính bằng một script tạm cùng cách tính này. **Chạy lại bây giờ ra κ 0,675, F1 0,800, 16/50**, vì sau khi
 đo κ đã sửa 4 nhãn sai của người thứ nhất (task 1726, 1814, 1906, 2051) và Label Studio không giữ bản cũ.
 Số trước khi sửa (0,650) mới là đồng thuận thật; số sau khi sửa lạc quan vì đã sửa đúng chỗ lệch.

@@ -29,6 +29,7 @@ import pandas as pd
 from annotation.sample_dedup_pairs import STRATA, build_strata
 from crawler.dedup import baseline_pairs, minhash_of, shingle_sets
 from experiments.bootstrap import ci, sentence_indices
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 ANN = ROOT / "data" / "annotation"
@@ -119,7 +120,7 @@ def main() -> None:
         "--labels",
         type=Path,
         default=LABELS,
-        help="file nhãn (mặc định guideline 0.1; 0.2: dedup_batch1.relabeled.jsonl)",
+        help="file nhãn (mặc định: nhãn gán lần đầu; có thể trỏ tới bản đã rà lại)",
     )
     args = ap.parse_args()
 
@@ -128,7 +129,7 @@ def main() -> None:
         LABELS.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in pulled), "utf-8")
         print(f"lưu {len(pulled)} nhãn -> {LABELS.relative_to(ROOT)}")
     print(f"nhãn: {args.labels.name}")
-    raw = [json.loads(x) for x in args.labels.read_text("utf-8").splitlines() if x.strip()]
+    raw = read_jsonl(args.labels)
     rows, info, pools = load(raw)
     n_by = Counter(r["stratum"] for r in rows)
     weight = [pools[r["stratum"]] / n_by[r["stratum"]] for r in rows]

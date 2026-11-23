@@ -10,7 +10,7 @@ File đặc tả là một danh sách, mỗi phần tử là một câu:
 
     [
       {"project": 6, "text": "Great environment, but unfair performance review",
-       "set": {"culture_fun": "positive"}, "why": "guideline 0.2.2"},
+       "set": {"culture_fun": "positive"}, "why": "guideline"},
       {"project": 7, "text": "Đây là một môi trường cân bằng giữa chuyên nghiệp",
        "flag": "không gán được (câu vô nghĩa, lẫn ngôn ngữ)", "clear": true, "why": "câu bị cắt dở"}
     ]

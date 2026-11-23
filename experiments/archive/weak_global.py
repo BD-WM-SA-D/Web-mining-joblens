@@ -1,7 +1,7 @@
 """Nhãn yếu kho tag chung cho WM2: thêm từ điển gom từ kho tag toàn cục (mọi tin VietJobs + TopCV) vào nhãn self-training.
 
-    uv run python -m ie.weak_global --eval-only    # chỉ đo độ nhiễu trên dev
-    uv run python -m ie.weak_global                # sinh data/weak/wm2_weak_globaltag.bio.jsonl
+    uv run python -m experiments.archive.weak_global --eval-only    # chỉ đo độ nhiễu trên dev
+    uv run python -m experiments.archive.weak_global                # sinh data/weak/wm2_weak_globaltag.bio.jsonl
 
 Cấu hình theo mục đăng ký trước "Cải thiện nhãn yếu WM2" trong `experiments/results.md` – không đổi sau khi xem số.
 
@@ -27,6 +27,7 @@ from ie.baseline_dict import build_index, spans, tag
 from ie.vietjobs import DEFAULT_CSV, load
 from ie.weak_labels import DEV_BIO, WEAK_DIR, _list, clean_tags, excluded_uids, label_tokens, postings
 from ie.weak_rules import refine
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 TOPCV = ROOT / "data" / "crawl" / "topcv" / "topcv_20261118.parquet"
@@ -67,7 +68,7 @@ def add_spans(tokens: list[str], base: list[str], extra: list[str]) -> list[str]
 
 
 def eval_dev(vocab: list[str], soft: set[str]) -> None:
-    rows = [json.loads(x) for x in DEV_BIO.read_text(encoding="utf-8").splitlines() if x]
+    rows = read_jsonl(DEV_BIO)
     tags_by_uid = {p["job_uid"]: p["tags"] for p in postings(soft)}
     dict_forms = load_aliases()
     g_index, g_max = build_index(vocab)

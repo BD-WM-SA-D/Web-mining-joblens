@@ -22,6 +22,8 @@
 
 from __future__ import annotations
 
+from common.io import read_jsonl
+
 import argparse
 import csv
 import json
@@ -37,7 +39,6 @@ from recsys.baseline import (
     idf_weights,
     job_skills,
     job_text,
-    load_events,
     rank_popularity,
     score_content_skill,
     split_time,
@@ -69,7 +70,7 @@ def scorers(df: pd.DataFrame, skills_path: Path | None) -> dict:
     from sklearn.metrics.pairwise import cosine_similarity
 
     jobs = list(df["job_uid"])
-    train, _ = split_time(load_events(EVENTS), 0.3)
+    train, _ = split_time(read_jsonl(EVENTS), 0.3)
     pop = rank_popularity(train, jobs)
     pop_max = max(pop.values()) or 1.0
     skills_by_job = job_skills(df, skills_path)

@@ -10,7 +10,6 @@ Có --eval-set thì ghi thêm experiments/runs/<run_id>.json (FORMAT-ket-qua.md)
 from __future__ import annotations
 
 import argparse
-import json
 from collections import Counter
 from pathlib import Path
 
@@ -20,6 +19,7 @@ from seqeval.scheme import IOB2
 from annotation.export_bio import TOKEN_RE
 from annotation.preannotate_dict import MODEL_VERSION, load_aliases
 from experiments.runlog import bootstrap_ci, save_run
+from common.io import read_jsonl
 
 
 def build_index(forms: list[str]) -> tuple[dict[tuple[str, ...], bool], int]:
@@ -68,7 +68,7 @@ def main() -> None:
     ap.add_argument("--snapshot")
     args = ap.parse_args()
 
-    rows = [json.loads(line) for line in Path(args.bio).read_text(encoding="utf-8").splitlines() if line]
+    rows = read_jsonl(Path(args.bio))
     index, max_len = build_index(load_aliases())
     gold = [r["tags"] for r in rows]
     pred = [tag(r["tokens"], index, max_len) for r in rows]

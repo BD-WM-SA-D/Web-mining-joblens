@@ -22,6 +22,7 @@ import numpy as np
 
 from experiments.bootstrap import ci, cluster_indices, sentence_indices
 from ie.baseline_dict import spans
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 BIO = ROOT / "data" / "annotation" / "skill_test1.bio.jsonl"
@@ -108,7 +109,7 @@ def main() -> None:
     ap.add_argument("--b", type=int, default=1000)
     args = ap.parse_args()
 
-    rows = [json.loads(x) for x in args.bio.read_text(encoding="utf-8").splitlines() if x.strip()]
+    rows = read_jsonl(args.bio)
     saved = json.loads(args.preds.read_text(encoding="utf-8"))
     if [r["id"] for r in rows] != saved["ids"]:
         raise SystemExit("thứ tự câu trong file dự đoán không khớp file nhãn – dừng")

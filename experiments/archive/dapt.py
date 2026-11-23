@@ -1,7 +1,7 @@
 """WM2 – tiền huấn luyện thích nghi miền (DAPT): PhoBERT-base-v2 học tiếp masked LM trên văn bản tin VietJobs.
 
-    uv run python -m ie.dapt corpus          # tách câu + tách từ 48k tin → data/dapt/vietjobs_seg.jsonl (~30 phút)
-    uv run python -m ie.dapt train           # MLM 1 epoch → data/models/phobert-dapt-vietjobs/
+    uv run python -m experiments.archive.dapt corpus          # tách câu + tách từ 48k tin → data/dapt/vietjobs_seg.jsonl (~30 phút)
+    uv run python -m experiments.archive.dapt train           # MLM 1 epoch → data/models/phobert-dapt-vietjobs/
     uv run python -m ie.phobert train --weak selftrain --base data/models/phobert-dapt-vietjobs --tag dapt --seed 1
 
 Cấu hình theo mục đăng ký trước "VietJobs cho WM6 và WM2" trong `experiments/results.md` – không đổi sau khi xem số.

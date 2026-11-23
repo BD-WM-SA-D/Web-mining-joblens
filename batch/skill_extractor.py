@@ -1,4 +1,4 @@
-"""Image `skill-extractor` (WM2): silver.job_postings → silver.job_skills (contract 0.1.1, overwrite_partition).
+"""Image `skill-extractor` (WM2): silver.job_postings → silver.job_skills (overwrite_partition).
 
     # chạy một mình trên file cục bộ (snapshot TopCV), bản stub từ điển
     uv run python -m batch.skill_extractor --input-file data/crawl/topcv/topcv_20261115.parquet \\

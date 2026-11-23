@@ -13,11 +13,11 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
-import json
 import random
 import re
 import unicodedata
 from pathlib import Path
+from common.io import read_jsonl
 
 SEED = 20261118
 RATE_WM1 = 0.5
@@ -79,7 +79,7 @@ def wm1(labels: Path) -> None:
 
     from crawler.eval_dedup import THRESHOLD, load, prf, snapshot_df
 
-    raw = [json.loads(x) for x in labels.read_text("utf-8").splitlines() if x.strip()]
+    raw = read_jsonl(labels)
     gold = [r["dup"] for r in raw]
     clean = snapshot_df()
     print(f"nhãn {labels.name}: {len(raw)} cặp, {sum(gold)} trùng; mỗi tin bị nhiễu với xác suất {RATE_WM1}")
@@ -131,7 +131,7 @@ def wm2(bio: Path, seeds: list[int], prefix: str) -> None:
     from annotation.preannotate_dict import load_aliases
     from ie.baseline_dict import build_index, tag
 
-    rows = [json.loads(x) for x in bio.read_text("utf-8").splitlines() if x.strip()]
+    rows = read_jsonl(bio)
     gold = [r["tags"] for r in rows]
     kw = {"mode": "strict", "scheme": IOB2}
     index, max_len = build_index(load_aliases())

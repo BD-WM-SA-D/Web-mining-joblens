@@ -4,11 +4,13 @@
 
 - Chỉ chạy trên tập train nhãn yếu (đã loại tin dev/test); không chạm dev hay test.
 - Span được thêm khi: TẤT CẢ model cùng đoán đúng span đó (đồng thuận = độ chắc), không chồng span nhãn yếu sẵn có,
-  và không bị luật guideline 0.4 loại (`ie.weak_rules.refine`).
+  và không bị luật guideline loại (`ie.weak_rules.refine`).
 - Không bỏ span nhãn yếu nào: self-training ở đây chỉ để giảm bỏ sót (recall).
 """
 
 from __future__ import annotations
+
+from common.io import read_jsonl
 
 import argparse
 import json
@@ -16,7 +18,7 @@ from collections import Counter
 from pathlib import Path
 
 from ie.baseline_dict import spans
-from ie.phobert import MODELS, predict, prepare, read_bio
+from ie.phobert import MODELS, predict, prepare
 from ie.weak_rules import refine
 
 WEAK_DIR = Path(__file__).resolve().parents[1] / "data" / "weak"
@@ -48,7 +50,7 @@ def main() -> None:
     args = ap.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    rows = prepare(read_bio(WEAK_DIR / f"wm2_weak_{args.src}.bio.jsonl"), MODELS / "seg_cache.jsonl")
+    rows = prepare(read_jsonl(WEAK_DIR / f"wm2_weak_{args.src}.bio.jsonl"), MODELS / "seg_cache.jsonl")
     preds = []
     for name in args.models:
         tok = AutoTokenizer.from_pretrained(MODELS / name)

@@ -1,4 +1,4 @@
-"""Nhãn yếu WM2 bằng LLM (OpenAI) theo guideline 0.4 – chỉ cho câu VietJobs.
+"""Nhãn yếu WM2 bằng LLM (OpenAI) theo guideline – chỉ cho câu VietJobs.
 
     uv run python -m ie.llm_label --model gpt-6-luna --bio data/annotation/skill_batch1.bio.jsonl --name dev_luna --eval
     uv run python -m ie.llm_label --model gpt-6-luna --bio data/weak/wm2_weak_selftrain.bio.jsonl --name train_luna --budget 2
@@ -22,6 +22,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDELINE = ROOT / "annotation" / "guideline_skill.md"
@@ -146,7 +147,7 @@ def evaluate(path: Path, gold_path: Path) -> None:
     from seqeval.scheme import IOB2
 
     pred = {r["id"]: r["tags"] for r in map(json.loads, path.read_text("utf-8").splitlines())}
-    gold = [json.loads(x) for x in gold_path.read_text("utf-8").splitlines() if x.strip()]
+    gold = read_jsonl(gold_path)
     gold = [g for g in gold if g["id"] in pred]
     y, p = [g["tags"] for g in gold], [pred[g["id"]] for g in gold]
     kw = {"mode": "strict", "scheme": IOB2}
@@ -174,7 +175,7 @@ def main() -> None:
     system = INSTRUCTIONS + guide
 
     ok = allowed_uids()
-    rows = [json.loads(x) for x in args.bio.read_text("utf-8").splitlines() if x.strip()]
+    rows = read_jsonl(args.bio)
     blocked = sum(r["job_uid"] not in ok for r in rows)
     rows = [r for r in rows if r["job_uid"] in ok][: args.limit]
     OUT_DIR.mkdir(parents=True, exist_ok=True)

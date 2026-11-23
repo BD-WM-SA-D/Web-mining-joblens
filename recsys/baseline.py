@@ -32,14 +32,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from experiments.runlog import bootstrap_ci, save_run
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 K = 10
 VERSION = "recsys-content"
-
-
-def load_events(path: Path) -> list[dict]:
-    return [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x]
 
 
 def split_time(events: list[dict], test_frac: float) -> tuple[list[dict], list[dict]]:
@@ -175,7 +172,7 @@ def main() -> None:
     args = ap.parse_args()
 
     df = pd.read_parquet(args.snapshot).drop_duplicates("job_uid")
-    events = load_events(args.events)
+    events = read_jsonl(args.events)
     train, test = split_time(events, args.test_frac)
     jobs = list(df["job_uid"])
     skills_by_job = job_skills(df, args.skills)

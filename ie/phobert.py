@@ -27,6 +27,7 @@ from seqeval.scheme import IOB2
 
 from annotation.preannotate_dict import load_aliases
 from ie.baseline_dict import build_index, tag
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 WEAK_DIR = ROOT / "data" / "weak"
@@ -89,15 +90,11 @@ def from_units(unit_tags: list[str], units: list[tuple[str, list[int]]], n_token
 # ---------- dữ liệu ----------
 
 
-def read_bio(path: Path) -> list[dict]:
-    return [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x]
-
-
 def prepare(rows: list[dict], cache: Path | None = None) -> list[dict]:
     """Thêm trường units (cache theo id vì tách từ 24k câu mất ~1 phút)."""
     seg = {}
     if cache and cache.exists():
-        seg = {r["id"]: r["units"] for r in read_bio(cache)}
+        seg = {r["id"]: r["units"] for r in read_jsonl(cache)}
     out, new = [], []
     for r in rows:
         units = seg.get(r["id"])
@@ -215,8 +212,8 @@ def train(args) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     t0 = time.time()
-    weak = prepare(read_bio(args.train or WEAK_DIR / f"wm2_weak_{args.weak}.bio.jsonl"), MODELS / "seg_cache.jsonl")
-    dev = prepare(read_bio(args.dev), MODELS / "seg_cache.jsonl")
+    weak = prepare(read_jsonl(args.train or WEAK_DIR / f"wm2_weak_{args.weak}.bio.jsonl"), MODELS / "seg_cache.jsonl")
+    dev = prepare(read_jsonl(args.dev), MODELS / "seg_cache.jsonl")
     pos = [r for r in weak if "B-SKILL" in r["tags"]]
     neg = [r for r in weak if "B-SKILL" not in r["tags"]]
     rng = random.Random(args.seed)
@@ -316,7 +313,7 @@ def eval_cmd(args) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tok = AutoTokenizer.from_pretrained(args.model)
     model = AutoModelForTokenClassification.from_pretrained(args.model).to(device)
-    rows = prepare(read_bio(args.bio), MODELS / "seg_cache.jsonl")
+    rows = prepare(read_jsonl(args.bio), MODELS / "seg_cache.jsonl")
     res, _ = evaluate(model, tok, rows, args.max_len, device)
     for k, v in res.items():
         print(f"{k:14s} P={v['precision']:.3f} R={v['recall']:.3f} F1={v['f1']:.3f}")

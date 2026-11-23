@@ -16,17 +16,17 @@ tick "khó", phần còn lại rút ngẫu nhiên trong cặp "không trùng" (c
 đo đồng thuận **trên tập đã làm giàu**, không phải trên phân bố của 300 cặp. Người thứ hai không được biết
 tỉ lệ này, cũng không thấy nhãn người 1 (task không chứa nhãn, project riêng).
 
-Bước 3, rà lại theo guideline 0.2 (sau khi κ lộ ra 4 kiểu lệch):
+Bước 3, rà lại theo guideline mới (sau khi κ lộ ra 4 kiểu lệch):
 
     uv run python -m annotation.kappa_dedup recheck
-    uv run python -m annotation.make_ls_project --title "WM1 dedup - rà lại 0.2" \
+    uv run python -m annotation.make_ls_project --title "WM1 dedup - rà lại" \
         --config annotation/label_studio_dedup.xml --tasks data/annotation/dedup_recheck02.labelstudio.json
     uv run python -m annotation.kappa_dedup merge --from-ls <project>
     uv run python -m crawler.eval_dedup --labels data/annotation/dedup_batch1.relabeled.jsonl
 
 Lô rà lại chọn theo **nhãn và nguồn, không theo dự đoán của hệ**: mọi cặp người 1 gán "trùng", mọi cặp tick
 "khó", mọi cặp khác trang. Gán lại **mù** (project mới, không thấy nhãn cũ). Nhãn mới ghi đè nhãn cũ ở các
-cặp đó; 253 cặp còn lại giữ nhãn 0.1. Hạn chế: quy tắc 8 mới (tiêu đề khác → xét mô tả) có thể biến vài cặp
+cặp đó; 253 cặp còn lại giữ nhãn cũ. Hạn chế: quy tắc 8 mới (tiêu đề khác → xét mô tả) có thể biến vài cặp
 "không trùng" cùng trang thành "trùng"; các cặp đó không được rà lại vì muốn tìm chúng phải dựa vào độ giống
 mô tả, tức là dựa vào chính thứ đang được chấm.
 """
@@ -41,6 +41,7 @@ from pathlib import Path
 
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 ANN = ROOT / "data" / "annotation"
@@ -74,7 +75,7 @@ def select(rows: list[dict], strata: dict[int, str], n: int, seed: int) -> list[
 
 
 def cmd_sample(_: argparse.Namespace) -> None:
-    rows = [json.loads(x) for x in LABELS.read_text("utf-8").splitlines() if x.strip()]
+    rows = read_jsonl(LABELS)
     man = json.loads(MANIFEST.read_text("utf-8"))
     strata = {i: p["stratum"] for i, p in enumerate(man["pairs"])}
     picked = select(rows, strata, N, SEED)
@@ -131,7 +132,7 @@ LABELS_RELABELED = ANN / "dedup_batch1.relabeled.jsonl"
 
 
 def recheck_indices(rows: list[dict], tasks: dict[int, dict]) -> list[int]:
-    """Cặp phải rà lại theo 0.2: nhãn "trùng", tick "khó", hoặc khác trang."""
+    """Cặp phải rà lại theo guideline mới: nhãn "trùng", tick "khó", hoặc khác trang."""
     out = []
     for r in rows:
         d = tasks[r["index"]]["data"]
@@ -141,7 +142,7 @@ def recheck_indices(rows: list[dict], tasks: dict[int, dict]) -> list[int]:
 
 
 def cmd_recheck(_: argparse.Namespace) -> None:
-    rows = [json.loads(x) for x in LABELS.read_text("utf-8").splitlines() if x.strip()]
+    rows = read_jsonl(LABELS)
     tasks = {t["data"]["index"]: t for t in json.loads(TASKS.read_text("utf-8"))}
     sel = recheck_indices(rows, tasks)
     random.Random(SEED).shuffle(sel)
@@ -152,7 +153,7 @@ def cmd_recheck(_: argparse.Namespace) -> None:
 def cmd_merge(args: argparse.Namespace) -> None:
     from crawler.eval_dedup import pull
 
-    rows = [json.loads(x) for x in LABELS.read_text("utf-8").splitlines() if x.strip()]
+    rows = read_jsonl(LABELS)
     new = {r["index"]: r for r in pull(args.from_ls)}
     changed = [
         (r["index"], r["dup"], new[r["index"]]["dup"])

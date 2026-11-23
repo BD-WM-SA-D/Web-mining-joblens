@@ -12,7 +12,6 @@ In một bảng để dán vào `experiments/results.md`. Không ghi file.
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
 from absa.lexicon import VERSION as DICT_VERSION
@@ -20,6 +19,7 @@ from absa.lexicon import aspect_terms, predict, sentiment_terms
 from absa.score import as_dict, fmt, report
 from absa.weak_labels import VERSION as WEAK_VERSION
 from absa.weak_labels import weak_label
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLD = [
@@ -39,10 +39,6 @@ CONFIGS = [
 ]
 
 
-def load_jsonl(path: Path) -> list[dict]:
-    return [json.loads(ln) for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
-
-
 def dev_set(gold_paths: list[Path], sents_path: Path) -> tuple[list[dict], list[dict], int]:
     """(nhãn vàng, câu tương ứng, số câu bị loại). Khớp theo văn bản nên id đổi vẫn tìm được.
 
@@ -50,7 +46,7 @@ def dev_set(gold_paths: list[Path], sents_path: Path) -> tuple[list[dict], list[
     """
     rows, seen = [], set()
     for path in gold_paths:
-        for r in load_jsonl(path):
+        for r in read_jsonl(path):
             # Gộp theo `sentence_id`, KHÔNG theo văn bản: hai review khác nhau có thể có câu giống hệt
             # ("Lương thấp"), đó là hai mẫu thật, gộp lại là làm hụt tập đánh giá.
             if (r["flag"] or "").startswith(UNUSABLE) or r["sentence_id"] in seen:
@@ -58,7 +54,7 @@ def dev_set(gold_paths: list[Path], sents_path: Path) -> tuple[list[dict], list[
             seen.add(r["sentence_id"])
             rows.append(r)
     by_text = {}
-    for s in load_jsonl(sents_path):
+    for s in read_jsonl(sents_path):
         by_text.setdefault(s["text"], s)
     keep = [(r, by_text[r["text"]]) for r in rows if r["text"] in by_text]
     return [r for r, _ in keep], [s for _, s in keep], len(rows) - len(keep)

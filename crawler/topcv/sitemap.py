@@ -11,7 +11,6 @@ from dataclasses import dataclass
 
 from lxml import etree
 
-SITEMAP_ROOT = "https://www.topcv.vn/sitemap.xml"
 JOBS_SITEMAP = "https://www.topcv.vn/sitemap/jobs.xml"
 JOB_URL_RE = re.compile(r"^https://www\.topcv\.vn/viec-lam/([^/]+)/(\d+)\.html$")
 # Theo robots.txt (2026-10-12) và quy tắc nhóm: không bao giờ chạm đường dẫn CV / riêng tư

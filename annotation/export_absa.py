@@ -63,14 +63,6 @@ def parse_task(task: dict) -> dict | None:
     }
 
 
-def weak_of(sentences: dict[str, dict]) -> dict[str, dict]:
-    """Nhãn yếu theo sentence_id, đọc lại từ nguồn vì task Label Studio cố ý không chứa điểm sao."""
-    out = {}
-    for sid, s in sentences.items():
-        out[sid] = as_dict(weak_label(s))
-    return out
-
-
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--project", type=int, required=True, help="id project (xem URL localhost:8080/projects/<id>)")

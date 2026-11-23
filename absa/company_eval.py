@@ -41,12 +41,14 @@ Hạn chế đã biết, phải ghi trong báo cáo:
 
 from __future__ import annotations
 
+from common.io import read_jsonl
+
 import argparse
 import json
 from collections import defaultdict
 from pathlib import Path
 
-from absa.eval_dev import GOLD, SENTS, load_jsonl
+from absa.eval_dev import GOLD, SENTS
 from absa.lexicon import VERSION as DICT_VERSION
 from absa.lexicon import predict as dict_predict
 from absa.score import as_dict
@@ -67,7 +69,7 @@ def load_ratings() -> list[dict]:
     """Mọi bản ghi điểm sao, khử trùng theo (công ty, vị trí trên trang, tháng, sao tổng)."""
     seen, out = set(), []
     for p in RATINGS:
-        for r in load_jsonl(p):
+        for r in read_jsonl(p):
             key = (r["company_id"], r["position"], r.get("review_month"), r.get("rating_overall"))
             if key in seen:
                 continue
@@ -283,7 +285,7 @@ def main() -> None:
     ap.add_argument("--no-run-log", action="store_true")
     args = ap.parse_args()
 
-    sents = load_jsonl(args.sentences)
+    sents = read_jsonl(args.sentences)
     ratings = load_ratings()
     blurred = blurred_company_stars(ratings)
     drows, _, _, _ = splits(args.gold, args.test_gold, args.sentences)

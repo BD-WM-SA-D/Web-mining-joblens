@@ -9,6 +9,8 @@ In ΔF1 (span strict) và khoảng tin cậy 95%; lưu dự đoán vào data/eva
 
 from __future__ import annotations
 
+from common.io import read_jsonl
+
 import argparse
 import json
 from pathlib import Path
@@ -18,7 +20,7 @@ import numpy as np
 from annotation.preannotate_dict import load_aliases
 from experiments.bootstrap import cluster_indices, sentence_indices
 from ie.baseline_dict import build_index, spans, tag
-from ie.phobert import MODELS, hybrid, predict, prepare, read_bio
+from ie.phobert import MODELS, hybrid, predict, prepare
 
 
 def counts(rows: list[dict], pred: list[list[str]]) -> np.ndarray:
@@ -57,7 +59,7 @@ def main() -> None:
     args = ap.parse_args()
     other = json.loads(args.against.read_text("utf-8")) if args.against else None
 
-    rows = prepare(read_bio(args.bio), MODELS / "seg_cache.jsonl")
+    rows = prepare(read_jsonl(args.bio), MODELS / "seg_cache.jsonl")
     index, max_n = build_index(load_aliases())
     dct = [tag(r["tokens"], index, max_n) for r in rows]
     cd = counts(rows, dct)

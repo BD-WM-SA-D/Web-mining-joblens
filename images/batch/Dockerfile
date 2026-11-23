@@ -46,6 +46,7 @@ WORKDIR /app
 COPY absa/ absa/
 COPY annotation/ annotation/
 COPY batch/ batch/
+COPY common/ common/
 COPY crawler/ crawler/
 COPY experiments/ experiments/
 COPY ie/ ie/
@@ -61,6 +62,7 @@ WORKDIR /app
 COPY absa/ absa/
 COPY annotation/ annotation/
 COPY batch/ batch/
+COPY common/ common/
 COPY crawler/ crawler/
 COPY experiments/ experiments/
 COPY ie/ ie/

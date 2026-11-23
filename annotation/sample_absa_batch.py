@@ -35,6 +35,7 @@ from pathlib import Path
 
 from absa.lexicon import ASPECTS
 from absa.weak_labels import weak_label
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "data" / "annotation"
@@ -146,7 +147,7 @@ def main() -> None:
     )
     args = ap.parse_args()
 
-    sents = [json.loads(ln) for ln in args.sentences.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    sents = read_jsonl(args.sentences)
     if args.exclude_reviews_of:
         # Chia dev/test theo REVIEW, không theo câu. Hai câu cùng một review dùng chung điểm sao và
         # cùng văn phong; để một câu ở dev, câu kia ở test là rò rỉ – mô hình train trên nhãn yếu của

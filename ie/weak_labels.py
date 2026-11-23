@@ -2,7 +2,7 @@
 
     uv run python -m ie.weak_labels                      # sinh data/weak/wm2_weak_tag.bio.jsonl
     uv run python -m ie.weak_labels --eval-only          # chỉ đo độ chính xác nhãn yếu trên dev
-    uv run python -m ie.weak_labels --version rules      # thêm luật theo guideline 0.4 (ie/weak_rules.py)
+    uv run python -m ie.weak_labels --version rules      # thêm luật theo guideline (ie/weak_rules.py)
 
 - Nguồn tag: VietJobs `technical_skills`, TopCV `skill_tags` (bỏ tag kỹ năng mềm – lấy từ cột `soft_skills` của VietJobs).
 - **Không lấy câu của tin thuộc dev (skill_batch1) hay test (skill_test1)** – loại theo job_uid trong manifest.
@@ -25,6 +25,7 @@ from annotation.preannotate_dict import SKIP_ALIASES, load_aliases
 from annotation.sample_skill_batch import SECTIONS, mask_pii, split_sentences
 from ie.baseline_dict import build_index, tag
 from ie.weak_rules import EXTRA_FORMS, refine
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 VIETJOBS = ROOT / "data" / "vietjobs" / "vietjobs_it.parquet"
@@ -98,7 +99,7 @@ def soft_vocab() -> set[str]:
 def eval_on_dev(
     dict_forms: list[str], tags_by_uid: dict[str, list[str]], version: str = "tag"
 ) -> dict[str, dict[str, float]]:
-    rows = [json.loads(x) for x in DEV_BIO.read_text(encoding="utf-8").splitlines() if x]
+    rows = read_jsonl(DEV_BIO)
     gold = [r["tags"] for r in rows]
     kw = {"mode": "strict", "scheme": IOB2}
     variants = {

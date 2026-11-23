@@ -23,6 +23,7 @@ import subprocess
 from pathlib import Path
 
 import pandas as pd
+from common.io import read_jsonl
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -66,7 +67,7 @@ def version(stub: bool) -> str:
 def read_file(path: Path) -> list[dict]:
     if path.suffix == ".parquet":
         return pd.read_parquet(path).to_dict("records")
-    return [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
+    return read_jsonl(path)
 
 
 def write_file(rows: list[dict], path: Path) -> None:

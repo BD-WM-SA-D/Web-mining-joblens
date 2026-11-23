@@ -1,4 +1,4 @@
-"""Luật làm sạch nhãn yếu WM2, lấy từ guideline gán nhãn bản 0.4 (annotation/guideline_skill.md).
+"""Luật làm sạch nhãn yếu WM2, lấy từ guideline gán nhãn (annotation/guideline_skill.md).
 
 Chỉ dựa vào guideline và ví dụ trong guideline, KHÔNG dựa vào lỗi quan sát trên test `skill_test1`.
 Ba việc:
@@ -15,7 +15,7 @@ from __future__ import annotations
 from annotation.export_bio import TOKEN_RE
 from ie.baseline_dict import spans
 
-# Guideline 0.4 mục 1 bảng "là kỹ năng", quy tắc 2–6, 8–10 và các ví dụ có span.
+# Guideline mục 1 bảng "là kỹ năng", quy tắc 2–6, 8–10 và các ví dụ có span.
 EXTRA_FORMS = [
     # sản phẩm thiết kế trung gian (quy tắc 2)
     "wireframe",
@@ -119,7 +119,7 @@ EXTRA_FORMS = [
     "ETL",
 ]
 
-# Guideline 0.4 quy tắc 1, 4, 7, 8, 9 (danh sách "không gán").
+# Guideline quy tắc 1, 4, 7, 8, 9 (danh sách "không gán").
 STOP_FORMS = [
     # tài liệu BA (quy tắc 1)
     "BRD",
