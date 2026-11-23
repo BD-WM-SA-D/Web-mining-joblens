@@ -35,7 +35,7 @@ from pathlib import Path
 
 from absa.lexicon import predict as dict_predict
 from absa.split import sentences_of
-from batch.tables import ROOT, add_io_args, load_input, save_output, version
+from batch.tables import ROOT, add_io_args, load_input, nothing_to_do, save_output, version
 from crawler.common import mask_pii
 
 DICT_CONFIDENCE = 0.6
@@ -139,6 +139,8 @@ def main() -> None:
     add_io_args(ap, "silver.review_aspects", changed_since_col="crawl_ts")
     args = ap.parse_args()
     messages = load_input(args)
+    if nothing_to_do(messages):
+        return
     model = None if args.stub else Hybrid(Path(os.environ.get("JOBLENS_ABSA_GOLD_DIR", ROOT / "data" / "annotation")))
     rows = score(messages, args.stub, args.run_id, model)
     print(f"{len(messages)} review → {len(rows)} dòng khía cạnh ({version(args.stub)})", flush=True)

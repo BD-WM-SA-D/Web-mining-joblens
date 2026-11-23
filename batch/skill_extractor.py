@@ -30,7 +30,7 @@ import os
 import re
 from pathlib import Path
 
-from batch.tables import ROOT, add_io_args, load_input, save_output, version
+from batch.tables import ROOT, add_io_args, load_input, nothing_to_do, save_output, version
 from service.skills import DICT_CONFIDENCE, SkillCatalog, slug
 
 TEXT_FIELDS = ("description", "requirements")
@@ -165,6 +165,8 @@ def main() -> None:
     add_io_args(ap, "silver.job_skills")
     args = ap.parse_args()
     jobs = load_input(args, INPUT_COLUMNS)
+    if nothing_to_do(jobs):
+        return
     model = None
     if not args.stub:
         model_dir = Path(os.environ.get("JOBLENS_SKILL_MODEL", ROOT / "data" / "models" / "skill-extractor"))

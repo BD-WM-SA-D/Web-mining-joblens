@@ -244,6 +244,15 @@ def load_input(args: argparse.Namespace, columns: tuple[str, ...] | None = None)
     return harmonize(rows[: args.limit] if args.limit else rows)
 
 
+def nothing_to_do(rows: list[dict]) -> bool:
+    """Lô rỗng là chuyện bình thường khi chạy tăng dần (lọc nguồn hoặc --changed-since không khớp dòng
+    nào). Job in một dòng rồi kết thúc bình thường, không để Airflow báo hỏng."""
+    if rows:
+        return False
+    print("không có dòng nào khớp bộ lọc đầu vào, không ghi gì", flush=True)
+    return True
+
+
 def save_output(rows: list[dict], args: argparse.Namespace, key: str) -> None:
     if args.output_file:
         write_file(rows, args.output_file)

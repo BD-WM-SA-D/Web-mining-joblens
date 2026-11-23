@@ -29,7 +29,7 @@ import argparse
 
 import pandas as pd
 
-from batch.tables import add_io_args, load_input, save_output, version
+from batch.tables import add_io_args, load_input, nothing_to_do, save_output, version
 from crawler.dedup import baseline_pairs, minhash_of, minhash_pairs, shingle_sets
 
 THRESHOLD = 0.5
@@ -119,6 +119,8 @@ def main() -> None:
     add_io_args(ap, "silver.job_dedup", changed_since_col=None)
     args = ap.parse_args()
     jobs = load_input(args, INPUT_COLUMNS)
+    if nothing_to_do(jobs):
+        return
     rows = dedup(jobs, args.stub, args.run_id)
     n_groups = len({r["dup_group_id"] for r in rows})
     print(f"{len(jobs)} tin → {n_groups} nhóm ({len(jobs) - n_groups} tin bị gộp vào tin khác)", flush=True)

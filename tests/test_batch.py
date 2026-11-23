@@ -325,3 +325,17 @@ def test_table_filter_dung_bieu_thuc_iceberg():
     assert table_filter((), None, None) == AlwaysTrue()
     expr = table_filter(("topcv",), parse_ts("2026-11-23"), "updated_ts")
     assert "topcv" in str(expr) and "updated_ts" in str(expr)
+
+
+def test_lo_rong_thi_ket_thuc_binh_thuong(tmp_path, monkeypatch, capsys):
+    """Lọc không khớp dòng nào (hay chạy tăng dần không có tin mới) là bình thường, không được hỏng."""
+    src = tmp_path / "in.jsonl"
+    out = tmp_path / "out.jsonl"
+    write_file(ROWS_FILTER, src)
+    monkeypatch.setattr(
+        "sys.argv",
+        ["job_dedup", "--input-file", str(src), "--output-file", str(out), "--run-id", "t", "--sources", "khong-co"],
+    )
+    job_dedup.main()
+    assert not out.exists(), "lô rỗng thì không ghi file kết quả"
+    assert "không có dòng nào" in capsys.readouterr().out
