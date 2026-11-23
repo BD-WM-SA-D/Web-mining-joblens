@@ -1,0 +1,45 @@
+{
+  "run_id": "2026-11-19-wm2-phobert+dict-weak-selftrain-ow05-dev-s1",
+  "task": "WM2",
+  "rq": "RQ3",
+  "method": "phobert+dict-weak-selftrain-ow05",
+  "baseline_of": "dict-alias",
+  "data": {
+    "eval_set": "skill_batch1",
+    "split": "dev",
+    "snapshot": null,
+    "ids_sha256": "dfb894cac053600b1767bb478a3c13e14ba73fcbf7639ec3d5fd6f825666a2f1",
+    "n_items": 300,
+    "n_gold": null
+  },
+  "train": {
+    "data": "wm2_weak_selftrain",
+    "base": "vinai/phobert-base-v2",
+    "n_items": 9555,
+    "params": {
+      "lr": 3e-05,
+      "epochs": 3,
+      "bs": 16,
+      "neg_ratio": 0.3,
+      "max_len": 256,
+      "o_weight": 0.5
+    }
+  },
+  "seed": 1,
+  "metrics": {
+    "precision": 0.7925,
+    "recall": 0.5793,
+    "f1": 0.6693
+  },
+  "ci95": {},
+  "runtime": {
+    "minutes": 8.5,
+    "hardware": "NVIDIA GeForce RTX 3050 Ti Laptop GPU"
+  },
+  "repro": {
+    "command": "C:\\Users\\hoang le\\joblens\\repos\\Web-mining-joblens\\ie\\phobert.py train --weak selftrain --o-weight 0.5 --tag ow05 --seed 1",
+    "git_commit": "eaee9db-dirty",
+    "models_yaml": null
+  },
+  "created_at": "2026-11-19T11:11:35+07:00"
+}

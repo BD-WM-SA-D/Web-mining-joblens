@@ -1,0 +1,37 @@
+{
+  "run_id": "2026-11-17-wm3-absa-hybrid-test-s2",
+  "task": "WM3",
+  "rq": "RQ3",
+  "method": "absa-hybrid",
+  "baseline_of": "absa-dict",
+  "data": {
+    "eval_set": "absa_test1",
+    "split": "test",
+    "snapshot": null,
+    "ids_sha256": "b7c3ffafd1201e96745a4953c0dba7ad5281d13d0a6b1a4ee312e95f5b775381",
+    "n_items": 348,
+    "n_gold": 378
+  },
+  "train": {
+    "data": "absa_dev_gold",
+    "n_items": 200,
+    "params": {
+      "class_weight": "balanced"
+    }
+  },
+  "seed": 2,
+  "metrics": {
+    "aspect_f1_micro": 0.753,
+    "sentiment_f1_macro": 0.5903
+  },
+  "ci95": {},
+  "runtime": {
+    "minutes": 0.05
+  },
+  "repro": {
+    "command": "uv run python -m absa.supervised test --model hybrid",
+    "git_commit": "217f81c-dirty",
+    "models_yaml": null
+  },
+  "created_at": "2026-11-17T11:22:00+07:00"
+}
