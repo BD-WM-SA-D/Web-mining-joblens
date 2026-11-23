@@ -48,7 +48,7 @@ kafka = [
 ]
 # Đọc/ghi bảng Iceberg cho các job batch/ (ADR 0001 D3) – chỉ cần khi chạy trên nền tảng Big Data: uv sync --group lakehouse
 lakehouse = [
-    "pyiceberg[s3fs,sql-sqlite]>=0.9",
+    "pyiceberg[s3fs,sql-sqlite,pyiceberg-core]>=0.9",
 ]
 service = [
     "fastapi>=0.115",

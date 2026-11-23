@@ -8,6 +8,9 @@
         --output-table silver.job_skills --run-id <airflow-run-id>
 
 Hai chế độ:
+- `--sources topcv,itviec`: chỉ xử lý nguồn cần, bỏ dữ liệu mô phỏng của nền tảng dữ liệu.
+- `--changed-since <ISO>`: chỉ xử lý tin có `updated_ts` từ mốc đó (Airflow truyền đầu khoảng lần chạy),
+  thay vì đọc lại toàn bộ bảng mỗi lần.
 - `--stub`: từ điển alias (`ie/resources/skill_alias.csv`, baseline WM2, F1 0,442 trên `skill_test1`). Không cần
   torch, vài giây cho vài nghìn tin.
 - mặc định: PhoBERT fine-tune trên nhãn yếu (F1 0,730 trên `skill_test1`), thư mục model ở `JOBLENS_SKILL_MODEL`
@@ -27,7 +30,7 @@ import os
 import re
 from pathlib import Path
 
-from batch.tables import ROOT, add_io_args, load_input, save_output, version
+from batch.tables import ROOT, add_io_args, load_input, nothing_to_do, save_output, version
 from service.skills import DICT_CONFIDENCE, SkillCatalog, slug
 
 TEXT_FIELDS = ("description", "requirements")
@@ -162,6 +165,8 @@ def main() -> None:
     add_io_args(ap, "silver.job_skills")
     args = ap.parse_args()
     jobs = load_input(args, INPUT_COLUMNS)
+    if nothing_to_do(jobs):
+        return
     model = None
     if not args.stub:
         model_dir = Path(os.environ.get("JOBLENS_SKILL_MODEL", ROOT / "data" / "models" / "skill-extractor"))
