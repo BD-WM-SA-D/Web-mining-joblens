@@ -1,14 +1,14 @@
-# ADR WM-0001 – Dùng LLM để gán nhãn huấn luyện cho WM2, không chạy LLM khi dùng mô hình
+# ADR WM-0001 – Dùng LLM để gán nhãn huấn luyện cho T1 (trích kỹ năng), không chạy LLM khi dùng mô hình
 
 | | |
 |---|---|
 | **Trạng thái** | Đã áp dụng |
 | **Ngày** | 2026-11-19 |
-| **Phạm vi** | WM2, trích xuất kỹ năng. Không đổi đầu vào và đầu ra của mô hình |
+| **Phạm vi** | T1, trích xuất kỹ năng. Không đổi đầu vào và đầu ra của mô hình |
 
 ## Bối cảnh
 
-- WM2 tìm các đoạn nói về kỹ năng bằng PhoBERT. Mô hình học từ **nhãn yếu**, vì nhóm chỉ gán tay được tập dev (300 câu) và tập test (1.000 câu).
+- T1 tìm các đoạn nói về kỹ năng bằng PhoBERT. Mô hình học từ **nhãn yếu**, vì nhóm chỉ gán tay được tập dev (300 câu) và tập test (1.000 câu).
 - Nhãn yếu làm từ tag của nhà tuyển dụng, từ điển, luật và self-training bỏ sót khoảng một nửa số kỹ năng so với nhãn tay.
 - Các thử nghiệm ở phía mô hình (huấn luyện thêm trên văn bản tin tuyển dụng, đổi trọng số hàm loss) không cải thiện đáng tin cậy. Nút thắt nằm ở chất lượng nhãn huấn luyện.
 - Không dùng chatbot LLM trong hệ thống: nằm ngoài phạm vi môn học, khó đánh giá, dễ bịa và tốn chi phí. Quyết định này không đảo lại điều đó.
