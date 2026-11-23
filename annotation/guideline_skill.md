@@ -1,4 +1,4 @@
-# Hướng dẫn gán nhãn kỹ năng (WM2) – bản 0.4
+# Hướng dẫn gán nhãn kỹ năng (WM2)
 
 Mục đích: tạo tập vàng (người gán) để đánh giá mô hình trích kỹ năng. Mỗi câu lấy từ mô tả hoặc yêu cầu của một tin tuyển dụng IT. Người gán bôi đen **từng kỹ năng cứng** trong câu, gán nhãn `SKILL`. Sau đó script đổi sang nhãn BIO (`B-SKILL`, `I-SKILL`, `O`) để tính F1 bằng seqeval (strict).
 
@@ -18,8 +18,8 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 | Phương pháp, quy trình kỹ thuật | Agile, Scrum, CI/CD, TDD, kiểm thử tự động |
 | Khái niệm, kiến thức kỹ thuật | OOP, lập trình hướng đối tượng, microservices, RESTful API, cấu trúc dữ liệu và giải thuật, machine learning, TCP/IP |
 | Nghiệp vụ kỹ thuật cụ thể | phân tích nghiệp vụ, viết test case, thiết kế UI/UX, ETL |
-| Sản phẩm thiết kế trung gian (từ 0.4) | wireframe, prototype, mockup, user flow, storyboard, sitemap |
-| Nghiệp vụ ngành (từ 0.4) | game mechanics, core loop, cân bằng game, eKYC, AML, Goods Receipt |
+| Sản phẩm thiết kế trung gian | wireframe, prototype, mockup, user flow, storyboard, sitemap |
+| Nghiệp vụ ngành | game mechanics, core loop, cân bằng game, eKYC, AML, Goods Receipt |
 
 ## 2. Không gán
 
@@ -108,7 +108,7 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 
 **Mạng xã hội, nền tảng:** chỉ là nơi đăng hay đối tượng ("video cho Tiktok", "fanpage Facebook") → không gán. Là công cụ phải vận hành ("Tiktok Ads", "Facebook Business Manager", "Shopee Seller Center") → gán.
 
-### Quy tắc chốt khi gán đợt 1 (bản 0.3)
+### Quy tắc chốt khi gán đợt 1
 
 **Cách viết câu không quyết định, cụm từ quyết định.** Câu viết dạng nhiệm vụ ("Thực hiện review code"), yêu cầu ("Có kinh nghiệm QLDA"), quyền lợi ("Nhận đào tạo về CI/CD"), tiêu đề mục ("A. Phân tích yêu cầu nghiệp vụ") hay "lĩnh vực…" ("lĩnh vực phân tích dữ liệu") đều gán nếu cụm là tên kỹ năng. Ngược lại, cùng cụm từ nhưng câu dùng làm **tên của thứ khác** thì không gán: tên đội ("đội QA", "team Data Engineering"), tên tài liệu ("viết tài liệu (Thiết kế phần mềm…)"), tên chuyên ngành học ("chuyên ngành Thiết kế đồ họa"), định hướng của cấp trên ("dựa trên art direction của cấp trên").
 
@@ -129,9 +129,9 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
 
 **Quy định chung, nội quy** ("quy trình an toàn lao động") → không gán.
 
-### Quy tắc chốt sau đo κ lần 1 trên tập test (bản 0.4)
+### Quy tắc chốt sau đo κ lần 1 trên tập test
 
-κ lần 1 (96 câu double của `skill_test1`, guideline 0.3) thấp hơn mục tiêu. Câu lệch dồn vào các nhóm dưới đây; mỗi nhóm chốt một quy tắc.
+κ lần 1 (96 câu double của tập test, trước khi chốt các quy tắc dưới đây) thấp hơn mục tiêu. Câu lệch dồn vào các nhóm dưới đây; mỗi nhóm chốt một quy tắc.
 
 **1. Tài liệu BA → không gán**, kể cả có "viết", "xây dựng", "đặc tả" đi kèm: BRD, SRS, URD, functional specification, use case, user story, acceptance criteria, tài liệu đặc tả, tài liệu thiết kế / GDD, test plan, tài liệu kỹ thuật, tài liệu hướng dẫn, SOP, datasheet. Công việc phân tích thì vẫn gán: `phân tích yêu cầu`, `Phân tích yêu cầu nghiệp vụ`, `phân tích nghiệp vụ`.
 
@@ -200,12 +200,3 @@ Gán nhãn khi cụm từ là **một kỹ năng cứng cụ thể**, có thể 
    uv run python -m annotation.sample_skill_batch --snapshot data/crawl/topcv/topcv_20261012.parquet --batch skill_test1 --sentences 1000 --seed 20261012 --max-per-posting 8
    ```
    Câu tiếng Anh gán như tiếng Việt (quy tắc 8); dòng tiêu đề kiểu "Your Recruitment Journey" thì Submit luôn.
-
-## Lịch sử
-
-| Bản | Ngày | Thay đổi |
-|---|---|---|
-| 0.1 | 2026-10-07 | Bản đầu |
-| 0.2 | 2026-10-11 | Thêm chứng chỉ, sản phẩm đem bán, tên thiết bị; ví dụ từ đợt 1; các bước Label Studio |
-| 0.3 | 2026-10-18 | Chốt sau 300 câu dev: quy tắc span 11–15 (viết tắt trong ngoặc, phiên bản, lược từ, từ bổ nghĩa, giữ/bỏ động từ); mục "Quy tắc chốt khi gán đợt 1" (cụm từ quyết định, tên trước ngoặc, chỉ số, tài liệu đầu ra, chức danh, từ quá chung) |
-| 0.4 | 2026-11-12 | Chốt sau κ lần 1 trên tập test: tài liệu BA không gán; wireframe/prototype/mockup gán; cloud/AI đứng riêng gán; bảo mật chỉ gán khi cụ thể; "quản lý" chỉ gán nghiệp vụ chính thức; nghiệp vụ ngành gán; thiết bị hạ tầng không gán (sửa quy tắc 9); động từ chung + việc, từ chung đứng riêng, ranh giới hay lệch |

@@ -1,4 +1,4 @@
-# Guideline gán nhãn cặp tin trùng (WM1) – bản 0.2
+# Guideline gán nhãn cặp tin trùng (WM1)
 
 Gán cho WM1: mỗi **cặp tin** nhận một nhãn **trùng** hoặc **không trùng**.
 Tập đánh giá: ~300 cặp, người thứ hai gán ~30 cặp để đo Cohen's κ (mục tiêu ≥ 0,7).
@@ -20,20 +20,20 @@ Có → trùng. Không → không trùng.
 2. Tiêu đề khác nhau nhưng chỉ do cách viết: thêm "Tuyển gấp", "Lương upto 2000$", tên chi nhánh, viết tắt.
 3. Một tin tiếng Việt, một tin tiếng Anh, cùng vị trí: **cùng chức danh và cùng cấp**. Chức danh quản lý
    dịch tương đương coi là cùng cấp: "Trưởng nhóm" ≈ "Lead" ≈ "Manager", "Chuyên viên" ≈ "Specialist".
-   *"Trưởng Nhóm Hạ Tầng Và Bảo Mật CNTT" và "Infrastructure Security Manager" cùng công ty → trùng.* (0.2)
+   *"Trưởng Nhóm Hạ Tầng Và Bảo Mật CNTT" và "Infrastructure Security Manager" cùng công ty → trùng.*
 4. Khác số lượng tuyển, khác hạn nộp, khác ngày đăng → vẫn trùng nếu là cùng đợt.
 
 **Không trùng:**
 
 5. **Khác cấp bậc**: Junior ≠ Senior ≠ Lead, Fresher ≠ Middle. Đây là hai vị trí khác nhau.
-   **Dải cấp bậc khác nhau cũng là khác cấp** (0.2): "Middle, Senior" ≠ "All Level" ≠ "Junior, Senior",
+   **Dải cấp bậc khác nhau cũng là khác cấp**: "Middle, Senior" ≠ "All Level" ≠ "Junior, Senior",
    dù hai dải giao nhau.
 6. **Khác mảng kỹ thuật hoặc khác yêu cầu chính**: Backend Java ≠ Backend Python, iOS ≠ Android, Manual
-   Tester ≠ Automation Tester. **Khác ngoại ngữ yêu cầu** cũng vậy (0.2): "IT Comtor – Tiếng Thái" ≠
+   Tester ≠ Automation Tester. **Khác ngoại ngữ yêu cầu** cũng vậy: "IT Comtor – Tiếng Thái" ≠
    "IT Comtor – Tiếng Indonesian".
 7. **Khác địa điểm làm việc** (Hà Nội ≠ TP.HCM), trừ khi tin ghi rõ nhiều địa điểm cho cùng một vị trí.
 8. Cùng công ty, cùng nhóm nghề, nhưng mô tả công việc khác hẳn → hai vị trí khác nhau.
-   **Tiêu đề khác nhau thì quyết theo phần mô tả công việc** (0.2): phần nhiệm vụ và yêu cầu như nhau →
+   **Tiêu đề khác nhau thì quyết theo phần mô tả công việc**: phần nhiệm vụ và yêu cầu như nhau →
    trùng (quy tắc 1); khác → không trùng. Đoạn giới thiệu công ty và phúc lợi **không tính**, vì công ty
    dùng chung cho mọi tin. *"AI Software Engineer … AI Agents" và "Agentic Engineer … Backend AI Agents"
    của MB Bank: xem nhiệm vụ, không xem tiêu đề.*
@@ -65,14 +65,7 @@ Nên tỷ lệ nhãn "không trùng" cao là bình thường, không phải lỗ
 ## 5. Quy trình
 
 1. Tạo project Label Studio, dán `annotation/label_studio_dedup.xml`, nhập `data/annotation/dedup_batch1.labelstudio.json`.
-2. Gán thử 30 cặp → bàn các cặp khó → chốt guideline 0.2.
+2. Gán thử 30 cặp → bàn các cặp khó → chốt guideline.
 3. Gán hết ~300 cặp. Phím tắt: `1` = trùng, `2` = không trùng, Ctrl+Enter = Submit.
 4. Người thứ hai gán ~30 cặp trên project riêng (không thấy nhãn người thứ nhất), tính Cohen's κ.
 5. Export → tính P/R/F1 cho baseline và MinHash, ghi `experiments/results.md`.
-
-## Lịch sử
-
-| Bản | Ngày | Thay đổi |
-|---|---|---|
-| 0.1 | 2026-11-13 | Nháp đầu, chờ duyệt và gán thử 30 cặp |
-| 0.2 | 2026-11-18 | Sau κ = 0,733 (4 cặp lệch, cả 4 người 1 "trùng" / người 2 "không trùng"): dải cấp bậc khác = khác cấp (5); khác ngoại ngữ yêu cầu = khác (6); tiêu đề khác thì quyết theo mô tả công việc, bỏ qua khung công ty (8); Việt/Anh cần cùng chức danh và cùng cấp, "Trưởng nhóm" ≈ "Manager" (3) |

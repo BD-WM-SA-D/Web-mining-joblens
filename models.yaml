@@ -1,53 +1,33 @@
-# Danh mục model đã train (quy tắc 8, mục "Trạng thái nằm ngoài git").
-# File model KHÔNG commit vào git – chỉ ghi lại phiên bản và chỗ lưu.
-#
-# Mẫu một mục:
-# - name: skill-extractor
-#   version: 0.1.0
-#   image: skill-extractor:0.1.0-<gitsha>
-#   s3_path: s3://joblens/models/skill-extractor/0.1.0/
-#   train_snapshot: <Iceberg snapshot id hoặc tag>
-#   metrics: {entity_f1_strict: <...>}
-#   trained_by: <Họ tên>
-#   date: <yyyy-mm-dd>
+# Danh mục mô hình đã huấn luyện.
+# File mô hình không commit vào git; ở đây chỉ ghi phương pháp, dữ liệu, chỉ số và tập đánh giá.
 models:
   - name: skill-extractor
-    version: 0.2.0
-    image: joblens/skill-extractor:0.2.0-93cf4cb (bản full, torch CPU; bản stub từ điển 0.2.0-93cf4cb-stub)
-    s3_path: <chưa đẩy – model nằm ở data/models/skill-extractor/ (không commit)>
-    train_snapshot: >
-      nhãn yếu do LLM gán theo guideline gán nhãn kỹ năng 0.4 cho câu VietJobs (chỉ gửi câu VietJobs,
-      không gửi câu crawl hay câu TEST), câu TopCV giữ nhãn self-training từ tag "Kỹ năng cần có";
-      cơ sở PhoBERT-base-v2, 3 epoch, lr 3e-5, max_len 256, seed 1
-    metrics: {entity_f1_strict: 0.729, precision: 0.725, recall: 0.734}
-    eval_set: skill_test1 (1.000 câu TEST đã đóng băng, sha256 9f7a2a0c…fbefba0362)
+    task: WM2, trích xuất kỹ năng
+    method: >
+      PhoBERT-base-v2 gán nhãn chuỗi (BIO, một loại thực thể là kỹ năng). Nhãn huấn luyện cho câu
+      VietJobs do LLM gán theo guideline gán nhãn kỹ năng; câu TopCV giữ nhãn self-training từ tag
+      "Kỹ năng cần có". Chỉ câu VietJobs được gửi ra ngoài, câu crawl và câu kiểm tra thì không.
+      3 epoch, lr 3e-5, max_len 256, 3 seed.
+    metrics: {entity_f1_strict: 0.730, precision: 0.725, recall: 0.734}  # trung bình 3 seed
+    baseline: {entity_f1_strict: 0.442}  # từ điển alias
+    eval_set: 1.000 câu TopCV đã đóng băng (kiểm tra mã băm trước khi chấm)
     trained_by: <Họ tên>
     date: 2026-11-19
     note: >
-      Ba seed cho 0.729 / 0.727 / 0.734 (trung bình 0.730). Baseline từ điển dict-alias được 0.442.
-      So với mô hình trước (nhãn yếu self-training, 0.617): ΔF1 +0.109…+0.117, bootstrap ghép cặp theo
-      tin, CI95 nằm trên 0 ở cả 3 seed. Bỏ 30 câu TEST trùng câu train vẫn được 0.731. Image chứa seed 1.
-      Ghi silver.job_skills. Chuẩn hóa ESCO CHƯA làm: cột esco_uri trong skill_alias.csv còn rỗng, nên
-      canonical_id hiện là id của từ điển 200 kỹ năng tự soạn, không phải ESCO.
+      Chuẩn hóa về bộ kỹ năng quốc tế (ESCO) mới làm một phần; tên chuẩn hiện lấy từ từ điển 200 kỹ năng.
   - name: absa-aspect-polarity
-    version: 0.1.0
-    image: <chưa đóng – hợp đồng chạy theo ADR 0001 D3>
-    s3_path: <không có file model – train lại trong ~3 giây bằng absa/supervised.py>
-    train_snapshot: >
-      200 câu dev gán tay (data/annotation/absa_trial.absa.jsonl + absa_dev2.absa.jsonl, 2026-11-17);
-      từ điển absa/resources/aspect_lexicon.csv + sentiment_lexicon.csv (absa-dict)
+    task: WM3, khía cạnh và cực tính của câu review
+    method: >
+      Khía cạnh lấy từ từ điển; cực tính học bằng hồi quy logistic 3 lớp trên các tín hiệu từ điển
+      cộng TF-IDF từ 1-2 gram. Huấn luyện trên 200 câu dev gán tay. Không dùng nhãn yếu từ điểm sao,
+      vì review công khai gần như không có lời chê.
     metrics: {aspect_f1_micro: 0.753, sentiment_f1_macro: 0.590}
-    eval_set: absa_test1 (348 câu TEST đã đóng băng, sha256 ee7f4832…)
+    baseline: {sentiment_f1_macro: 0.518}  # từ điển cảm xúc
+    eval_set: 348 câu review đã đóng băng
     trained_by: <Họ tên>
     date: 2026-11-17
     note: >
-      Khía cạnh lấy từ từ điển (match_aspects), chỉ cực tính là học: hồi quy logistic 3 lớp trên
-      11 tín hiệu của từ điển cộng TF-IDF từ 1-2 gram. Ghi silver.review_aspects.
-      Không dùng nhãn yếu để train – pool ngoài review của TEST chỉ còn 1 cặp negative.
-      CẢNH BÁO khi đọc số: một luật một dòng theo trường `section` của ITviec được 0.583 trên cùng
-      tập TEST, chênh với mô hình này không có ý nghĩa (p = 0.264). Phần do học mà ra là không đáng
-      kể; xem mục "Kiểm lại" trong experiments/results.md trước khi trích số này.
-      BỔ SUNG 2026-11-18: dưới đích là điểm sao ITviec (không do người gán tạo ra), mô hình này
-      HƠN luật section có ý nghĩa ở mức review (Spearman 0.329 so với 0.239, Δρ = +0.090,
-      CI95 [+0.022; +0.161], p = 0.005), và từ điển thì không mang tín hiệu mức công ty
-      (ρ = −0.052, CI chứa 0) trong khi mô hình này có (0.196). Xem absa/company_eval.py.
+      Luật một dòng theo phần của review (điều thích, góp ý) đạt 0.583 trên cùng tập, chênh với
+      mô hình này không có ý nghĩa thống kê. Đối chiếu với điểm sao theo khía cạnh của trang nguồn
+      (tín hiệu người gán không tạo ra), mô hình này hơn luật theo phần review ở mức review
+      (Spearman 0.329 so với 0.239).

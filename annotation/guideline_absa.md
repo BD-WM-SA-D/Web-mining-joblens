@@ -1,4 +1,4 @@
-# Guideline gán nhãn ABSA review công ty (bản 0.2.3 – đã gán 60 câu thử + 356 câu TEST + 200 câu dev)
+# Guideline gán nhãn ABSA review công ty
 
 Gán cho WM3: mỗi **câu** trong review công ty được gán các cặp **(khía cạnh, cực cảm xúc)**.
 Một câu có thể có nhiều khía cạnh, mỗi khía cạnh một cực riêng. Câu không nói về khía cạnh nào → không gán gì.
@@ -144,15 +144,7 @@ Cách phân xử nhanh: tính từ đi ngay với "môi trường" mà nói về
 thì **chỉ** `training_learning`. Tính từ đánh giá chung ("tốt", "good", "chuyên nghiệp") thì `culture_fun`,
 cộng thêm khía cạnh mà phần còn lại của câu nói tới.
 
-Bản 0.2 ghi "môi trường chuyên nghiệp → vẫn không gán (quá chung)" nhưng ví dụ ở mục 5 của chính nó
-lại gán `culture_fun` cho đúng câu kiểu đó. Lúc gán 300 câu TEST, 29/35 câu có chữ "môi trường" được
-gán `culture_fun`; 6 câu còn lại đều là "môi trường + bổ ngữ về học hỏi" nên vào `training_learning`.
-Tức là cách gán đã nhất quán, chỉ có câu luật kia là sai. Bỏ câu luật đó.
-
-> **TEST không sửa theo hai dòng mới này.** 356 câu TEST được gán theo bản 0.2.2 và đã đóng băng,
-> đã có mô hình chấm trên đó, nên sửa nhãn test lúc này là sai nguyên tắc. Hệ quả: trong TEST còn
-> khoảng 2–3 câu gán khác bản 0.2.3 (một câu khen kiến thức của leader gán `culture_fun`, một câu về
-> uống bia gán `management_care`). Số lượng nhỏ nhưng phải ghi trong phần hạn chế của báo cáo.
+> **Tập kiểm tra không sửa theo hai quy tắc này.** Tập đã đóng băng và đã được chấm, nên sửa nhãn lúc này là sai nguyên tắc. Trong đó còn vài câu gán khác quy tắc mới (một câu khen kiến thức của leader gán `culture_fun`, một câu về uống bia gán `management_care`); phải ghi trong phần hạn chế của báo cáo.
 
 ## 2d. Khi nào được điền `neutral`
 
@@ -199,7 +191,7 @@ trên thì chỉ còn 1–2 câu `neutral`. Dữ liệu nó vậy, không phải
 - Đại từ thay thế ("ở đó", "chỗ này", "họ") vẫn tính: "Họ hứa tăng lương rồi quên" → `salary_benefits` = `negative`, `management_care` = `negative`.
 - Câu chỉ có emoji/cụm cực ngắn ("OT :(( ") → vẫn gán được (`work_life_balance` = `negative`).
 - Còn sót tên người thật trong câu → tick cờ `PII` để lọc lại, vẫn gán bình thường.
-- Câu khó/mơ hồ → tick cờ `khó / cần bàn`, các câu này sẽ bàn khi chốt guideline 0.2.
+- Câu khó/mơ hồ → tick cờ `khó / cần bàn`, các câu này sẽ bàn khi chốt guideline.
 
 ### Câu đến từ phần nào của review (đọc kỹ, dễ gán sai)
 
@@ -236,12 +228,12 @@ Câu trong "Đề nghị cải thiện" thường viết dưới dạng **đề 
 
 1. Mỗi task Label Studio = 1 câu + ngữ cảnh mờ + tên công ty đã ẩn danh (`cty_<id>`).
 2. Chọn các cặp (khía cạnh, cực) bằng checkbox (18 lựa chọn + cờ). Không chọn gì = câu không có khía cạnh.
-3. Gán thử 50 câu → bàn các câu lệch/khó → chốt guideline 0.2 → gán chính thức ~1.000 câu.
+3. Gán thử 50 câu → bàn các câu lệch/khó → chốt guideline → gán chính thức ~1.000 câu.
 4. Người thứ hai gán ~100 câu trên project riêng (không thấy nhãn người thứ nhất, task giữ `src_task`), đo κ:
    - κ tính trên từng khía cạnh (nhãn 4 lớp: pos/neg/neu/không nhắc) rồi báo trung bình và từng khía cạnh.
 5. Export → `data/annotation/absa_batch1.jsonl`; thống kê ghi `experiments/results.md`.
 
-## 6. Những điều chưa chốt (chờ Hoang Le duyệt)
+## 6. Những điều chưa chốt
 
 - [ ] Có thêm nhãn `general` cho khen/chê chung chung không? (bản nháp: **không**)
 - [ ] `neutral` có giữ không hay gộp vào "không nhắc"? (bản nháp: **giữ**, vì đề tài đăng ký ghi positive/negative/neutral)
@@ -259,16 +251,3 @@ Câu trong "Đề nghị cải thiện" thường viết dưới dạng **đề 
 - Hệ quả khi gán nhãn: **thiếu câu phê phán nặng**. Nguồn câu `negative` chủ yếu là phần
   "Đề nghị cải thiện" của các review 4–5 sao, nên thường là góp ý nhẹ chứ không phải bức xúc.
 - Khi báo macro-F1 phải kèm **số lượng từng lớp**; lớp `negative` ít mẫu thì nói rõ là kém tin cậy.
-
-## Lịch sử
-
-| Bản | Ngày | Thay đổi |
-|---|---|---|
-| 0.1 | 2026-11-12 | Nháp đầu, chờ duyệt và gán thử 50 câu |
-| 0.1.1 | 2026-11-13 | Thêm mục "câu đến từ phần nào" và mục 7 hạn chế, sau khi crawl 200 công ty |
-| 0.1.2 | 2026-11-15 | Nói rõ **để trống ≠ `neutral`** (câu hỏi lúc gán lô thử); sửa cấu hình Label Studio bị trắng trên trắng ở chế độ Dark |
-| 0.1.3 | 2026-11-15 | Thêm mục 2b: quy trình 4 bước gán một câu, kèm ví dụ chạy đủ các bước |
-| 0.2 | 2026-11-15 | Sau lô thử 60 câu: mục 2c bảng tra thuật ngữ, luật 8–9 siết `neutral`, gỡ nhập nhằng "du lịch công ty" |
-| 0.2.1 | 2026-11-15 | Thêm luật 10 (gán theo điều người viết muốn nói) và mục 2d: phép thử đổi chiều + ba câu hỏi cho `neutral` |
-| 0.2.2 | 2026-11-17 | Bỏ câu luật tự mâu thuẫn về "môi trường" ở mục 2c; chốt "môi trường + từ đánh giá chung" → `culture_fun` |
-| 0.2.3 | 2026-11-17 | Sau khi đo κ (0,871 trên 35 câu): mục 2c thêm "năng lực của sếp/lead" → `management_care`, "CLB, uống bia" → `culture_fun`, và luật "câu liệt kê nhiều thứ phải tra từng thứ" (chỗ hai người lệch nhiều nhất) |
