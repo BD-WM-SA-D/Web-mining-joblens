@@ -101,7 +101,11 @@ class PhoBERT:
         import torch
         from transformers import AutoModelForTokenClassification, AutoTokenizer
 
+        from common.cpu import setup_torch_threads
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device.type == "cpu":
+            print(f"torch dùng {setup_torch_threads()} luồng CPU", flush=True)
         self.tok = AutoTokenizer.from_pretrained(model_dir)
         self.model = AutoModelForTokenClassification.from_pretrained(model_dir).to(self.device)
         self.max_len = max_len
@@ -120,7 +124,16 @@ class PhoBERT:
         out: list[list[tuple[int, int]]] = [[] for _ in texts]
         if not units:
             return out
-        tags = predict(self.model, self.tok, prepare(units), self.max_len, self.device)
+        # Câu giống hệt nhau (tin cùng công ty hay lặp mô tả) chỉ chạy mô hình một lần.
+        first: dict[tuple[str, ...], int] = {}
+        uniq = []
+        for u in units:
+            key = tuple(u["tokens"])
+            if key not in first:
+                first[key] = len(uniq)
+                uniq.append(u)
+        uniq_tags = predict(self.model, self.tok, prepare(uniq), self.max_len, self.device)
+        tags = [uniq_tags[first[tuple(u["tokens"])]] for u in units]
         for (i, base, toks), t in zip(where, tags, strict=True):
             out[i] += [(base + s, base + e) for s, e in bio_spans(toks, t)]
         return out
