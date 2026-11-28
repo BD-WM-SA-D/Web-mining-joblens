@@ -131,6 +131,10 @@ def predict(model, tokenizer, rows: list[dict], max_len: int, device, bs: int = 
     import torch
 
     model.eval()
+    # Xếp câu theo độ dài để mỗi lô ít phần đệm (padding), tính xong trả về đúng thứ tự cũ. Kết quả không đổi,
+    # chỉ bớt phép tính thừa trên token đệm.
+    order = sorted(range(len(rows)), key=lambda i: len(rows[i]["units"]))
+    rows = [rows[i] for i in order]
     preds = []
     for s in range(0, len(rows), bs):
         batch = rows[s : s + bs]
@@ -141,14 +145,17 @@ def predict(model, tokenizer, rows: list[dict], max_len: int, device, bs: int = 
         for i, (x, _, _) in enumerate(enc):
             ids[i, : len(x)] = torch.tensor(x)
             mask[i, : len(x)] = 1
-        with torch.no_grad():
+        with torch.inference_mode():
             logits = model(input_ids=ids.to(device), attention_mask=mask.to(device)).logits.argmax(-1).cpu()
         for i, r in enumerate(batch):
             first = enc[i][2]
             ut = [LABELS[int(logits[i, p])] for p in first] + ["O"] * (len(r["units"]) - len(first))
             ut = [("B-SKILL" if t == "I-SKILL" and (k == 0 or ut[k - 1] == "O") else t) for k, t in enumerate(ut)]
             preds.append(from_units(ut, r["units"], len(r["tokens"])))
-    return preds
+    restored: list[list[str]] = [[] for _ in preds]
+    for pos, i in enumerate(order):
+        restored[i] = preds[pos]
+    return restored
 
 
 def hybrid(model_tags: list[str], dict_tags: list[str]) -> list[str]:
